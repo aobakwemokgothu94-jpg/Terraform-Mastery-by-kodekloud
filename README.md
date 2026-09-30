@@ -32,7 +32,7 @@
 | **11** | Create Alarm Using Terraform | 2026-09-27 | 500 | ✅ Completed |
 | **12** | Create Public S3 Bucket Using Terraform | 2026-09-28 | 500 | ✅ Completed |
 | **13** | Create Private S3 Bucket Using Terraform | 2026-09-29 | 500 | ✅ Completed |
-| **14** | Create IAM User Using Terraform | — | 0 | 🔒 Locked |
+| **14** | Create IAM User Using Terraform  | 2026-09-30 | 500 | ✅ Completed |
 | **15** | Create IAM Group Using Terraform | — | 0 | 🔒 Locked |
 | **16** | Create IAM Policy Using Terraform | — | 0 | 🔒 Locked |
 | **17** | Create DynamoDB Table Using Terraform | — | 0 | 🔒 Locked |
