@@ -1,0 +1,42 @@
+Problem Statement
+When setting up cloud infrastructure on AWS, Identity and Access Management (IAM) is critical for managing user access and authorization. The Nautilus DevOps team requires an IAM policy configured in the us-east-1 region to provide read-only access to the Amazon EC2 console, allowing users to view all instances, AMIs, and snapshots without granting modification or deletion privileges.
+
+Requirements:
+
+Resource Name: iampolicy_jim
+
+Region: us-east-1
+
+Access Level: Read-only EC2 console permissions (ec2:Describe*)
+
+Directory & Target File: /home/bob/terraform/main.tf
+
+Solution
+main.tf
+resource "aws_iam_policy" "iampolicy_jim" {
+  name        = "iampolicy_jim"
+  path        = "/"
+  description = "Allows read-only access to EC2 console"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = "ec2:Describe*"
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+Verification & Execution Steps
+Initialize and apply infrastructure:
+
+cd /home/bob/terraform
+terraform init
+terraform apply -auto-approve
+
+Verify resource creation in Terraform state:
+
+terraform show
