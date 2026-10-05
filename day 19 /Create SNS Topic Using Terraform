@@ -1,1 +1,64 @@
+# AWS SNS Topic Provisioning with Terraform
 
+## Overview
+Automates the creation of an Amazon Simple Notification Service (SNS) topic for the **Nautilus DevOps** team using Infrastructure as Code (IaC).
+
+---
+
+## Configuration (`main.tf`)
+```hcl
+resource "aws_sns_topic" "nautilus_notifications" {
+  name = "nautilus-notifications"
+}
+Deployment Steps
+Initialize Terraform:
+
+Bash
+terraform init
+Apply Infrastructure:
+
+Bash
+terraform apply -auto-approve
+Deployment Results
+Status: Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+
+Topic Name: nautilus-notifications
+
+Topic ARN: arn:aws:sns:us-east-1:000000000000:nautilus-notifications
+
+
+---
+
+
+Run this in your terminal to save it directly:
+
+```bash
+cat << 'EOF' > /home/bob/terraform/README.md
+# AWS SNS Topic Provisioning with Terraform
+
+## Overview
+Automates the creation of an Amazon Simple Notification Service (SNS) topic for the **Nautilus DevOps** team using Infrastructure as Code (IaC).
+
+---
+
+## Configuration (`main.tf`)
+```hcl
+resource "aws_sns_topic" "nautilus_notifications" {
+  name = "nautilus-notifications"
+}
+Deployment Steps
+Initialize Terraform:
+
+Bash
+terraform init
+Apply Infrastructure:
+
+Bash
+terraform apply -auto-approve
+Deployment Results
+Status: Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+
+Topic Name: nautilus-notifications
+
+Topic ARN: arn:aws:sns:us-east-1:000000000000:nautilus-notifications
+EOF
