@@ -1,0 +1,59 @@
+# AWS CloudWatch Logging Setup with Terraform
+
+This repository contains the Terraform configuration used by the Nautilus DevOps team to provision AWS CloudWatch logging infrastructure for application log management.
+
+## Project Overview
+
+The goal of this configuration is to create a dedicated AWS CloudWatch Log Group and Log Stream to capture application logs.
+
+### Resources Provisioned
+
+* **AWS CloudWatch Log Group:** `datacenter-log-group`
+* **AWS CloudWatch Log Stream:** `datacenter-log-stream`
+
+---
+
+## File Structure
+
+```text
+/home/bob/terraform/
+├── main.tf              # Primary Terraform configuration declaring CloudWatch resources
+├── provider.tf          # AWS Provider configuration
+├── terraform.tfstate    # Terraform state file trackings created resources
+└── README.md            # Documentation
+Configuration (main.tf)
+Terraform
+resource "aws_cloudwatch_log_group" "datacenter_log_group" {
+  name = "datacenter-log-group"
+}
+
+resource "aws_cloudwatch_log_stream" "datacenter_log_stream" {
+  name           = "datacenter-log-stream"
+  log_group_name = aws_cloudwatch_log_group.datacenter_log_group.name
+}
+Deployment Instructions
+Navigate to the Terraform working directory:
+
+Bash
+cd /home/bob/terraform
+Initialize Terraform:
+Initializes backend configuration and downloads required provider plugins (AWS Provider v5.x).
+
+Bash
+terraform init
+Plan and Apply Infrastructure:
+Applies the Terraform configuration to create the CloudWatch log group and log stream.
+
+Bash
+terraform apply -auto-approve
+Verify Deployment:
+Confirm that resources were created and managed by Terraform:
+
+Bash
+terraform show
+Verification
+Upon successful execution of terraform apply, inspect the state output to confirm the resource Amazon Resource Names (ARNs):
+
+Log Group ARN: arn:aws:logs:<region>:<account_id>:log-group:datacenter-log-group
+
+Log Stream ARN: arn:aws:logs:<region>:<account_id>:log-group:datacenter-log-group:log-stream:datacenter-log-stream
