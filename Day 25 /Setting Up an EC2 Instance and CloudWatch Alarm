@@ -1,0 +1,85 @@
+Bash
+cat << 'EOF' > /home/bob/terraform/README.md
+# Infrastructure as Code: CloudFormation Stack Deployment via Terraform
+
+![Terraform](https://img.shields.io/badge/Terraform-v1.x-623CE4?logo=terraform&logoColor=white)
+![AWS CloudFormation](https://img.shields.io/badge/AWS-CloudFormation-FF9900?logo=amazon-aws&logoColor=white)
+![AWS S3](https://img.shields.io/badge/AWS-S3_Bucket-569A31?logo=amazon-s3&logoColor=white)
+
+## 📌 Project Overview
+This project demonstrates automated infrastructure provisioning using **Terraform** to manage **AWS CloudFormation** stacks. As part of an automated DevOps pipeline effort, a CloudFormation stack (`xfusion-stack`) is deployed containing an Amazon S3 bucket (`xfusion-bucket-949827236`) with versioning enabled for data retention and security.
+
+---
+
+## 🛠 Tech Stack & Architecture
+
+- **IaC Framework:** Terraform
+- **Cloud Orchestration:** AWS CloudFormation
+- **Cloud Storage:** Amazon S3 (Versioning Enabled)
+- **Configuration Format:** HCL (`main.tf`) with inline JSON CloudFormation Template Body
+
+---
+
+## 🚀 Deployment Steps
+
+### 1. Initialize Terraform
+Downloads the required AWS provider (`hashicorp/aws`) and sets up the local backend state environment:
+```bash
+terraform init
+2. Provision Infrastructure
+Applies the configuration non-interactively to create the CloudFormation stack:
+
+Bash
+terraform apply -auto-approve
+🔍 Verification
+Verify that the stack and versioned S3 bucket were provisioned successfully:
+
+Bash
+terraform show
+EOF
+
+
+---
+
+### Markdown Portfolio Preview
+
+Below is how the `README.md` file renders for your GitHub or portfolio repository:
+
+---
+
+# Infrastructure as Code: CloudFormation Stack Deployment via Terraform
+
+![Terraform](https://img.shields.io/badge/Terraform-v1.x-623CE4?logo=terraform&logoColor=white)
+![AWS CloudFormation](https://img.shields.io/badge/AWS-CloudFormation-FF9900?logo=amazon-aws&logoColor=white)
+![AWS S3](https://img.shields.io/badge/AWS-S3_Bucket-569A31?logo=amazon-s3&logoColor=white)
+
+## 📌 Project Overview
+This project demonstrates automated infrastructure provisioning using **Terraform** to manage **AWS CloudFormation** stacks. As part of an automated DevOps pipeline effort, a CloudFormation stack (`xfusion-stack`) is deployed containing an Amazon S3 bucket (`xfusion-bucket-949827236`) with versioning enabled for data retention and security.
+
+---
+
+## 🛠 Tech Stack & Architecture
+
+- **IaC Framework:** Terraform
+- **Cloud Orchestration:** AWS CloudFormation
+- **Cloud Storage:** Amazon S3 (Versioning Enabled)
+- **Configuration Format:** HCL (`main.tf`) with inline JSON CloudFormation Template Body
+
+---
+
+## 🚀 Deployment Steps
+
+### 1. Initialize Terraform
+Downloads the required AWS provider (`hashicorp/aws`) and sets up the local backend state environment:
+```bash
+terraform init
+2. Provision Infrastructure
+Applies the configuration non-interactively to create the CloudFormation stack:
+
+Bash
+terraform apply -auto-approve
+🔍 Verification
+Verify that the stack and versioned S3 bucket were provisioned successfully:
+
+Bash
+terraform show
