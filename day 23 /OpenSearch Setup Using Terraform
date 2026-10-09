@@ -1,0 +1,60 @@
+# Amazon OpenSearch Service Domain Provisioning with Terraform
+
+This repository contains Terraform configurations for provisioning an Amazon OpenSearch Service domain in AWS for log storage and searching.
+
+## Infrastructure Architecture
+
+The configuration provisions an Amazon OpenSearch cluster with the following specs:
+* **Domain Name:** `nautilus-es`
+* **Engine Version:** `OpenSearch_2.11`
+* **Cluster Configuration:**
+  * **Instance Type:** `t3.small.search`
+  * **Instance Count:** 1
+* **EBS Storage:**
+  * **EBS Volume Type:** `gp2`
+  * **Volume Size:** 10 GB
+
+## Requirements
+
+| Name | Version |
+|------|---------|
+| **Terraform** | `>= 1.0.0` |
+| **AWS Provider** | `~> 5.0` |
+
+## Project Structure
+
+```text
+/home/bob/terraform
+├── main.tf              # Primary Terraform configuration file
+├── terraform.tfstate    # Terraform state file
+└── .terraform.lock.hcl  # Provider dependency lock file
+Deployment Instructions
+1. Initialize Terraform
+Initialize the working directory and install the required AWS provider plugin:
+
+Bash
+terraform init
+2. Review Execution Plan
+Generate and inspect the execution plan:
+
+Bash
+terraform plan
+3. Deploy Infrastructure
+Apply the configuration to provision the OpenSearch domain:
+
+Bash
+terraform apply -auto-approve
+Note: OpenSearch domain creation typically takes several minutes to complete on AWS.
+
+4. Verify State
+Ensure that the deployed infrastructure matches the configuration and no pending updates remain:
+
+Bash
+terraform plan
+Expected Output: No changes. Your infrastructure matches the configuration.
+
+State Recovery / Import (If Interrupted)
+If the deployment process is interrupted while the resource already exists in AWS, import the resource into state:
+
+Bash
+terraform import aws_opensearch_domain.nautilus_es nautilus-es
