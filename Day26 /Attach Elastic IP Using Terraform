@@ -1,0 +1,77 @@
+
+AWS Elastic IP Mapping Automation
+
+This repository outlines the Terraform tasks executed by the Nautilus DevOps team to map and attach an existing Elastic IP resource to an active EC2 compute resource in the us-east-1 cloud zone.
+
+📋 Task Parameters
+
+• Working Directory: /home/bob/terraform
+• Target File: main.tf
+• EC2 Resource Handle: devops-ec2
+• Elastic IP Allocation Tag: devops-ec2-eip
+• Primary Deployment Cloud Zone: us-east-1
+
+🛠️ Configuration Steps
+
+The automation layout maps out infrastructure components sequentially while omitting duplicate declaration structures from existing root templates.
+::: tabs
+
+1. Unified Main Code configuration
+
+Ensure the execution state includes tracking variables for the instance allocation matching the parameters block.
+hcl
+resource "aws_eip" "ec2_eip" {
+  tags = {
+    Name = "devops-ec2-eip"
+  }
+}
+
+resource "aws_instance" "devops_ec2" {
+  ami           = "ami-0c7217cdde317cfec"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "devops-ec2"
+  }
+}
+
+resource "aws_eip_association" "eip_assoc" {
+  instance_id   = aws_instance.devops_ec2.id
+  allocation_id = aws_eip.ec2_eip.id
+}
+
+
+2. Execution Run Command
+
+Execute the configuration directly from your integration window workspace to tie the allocated parameters together:
+bash
+terraform apply -auto-approve
+Use code with caution.
+:::
+
+🔍 Validation Preview
+
+Upon launching the orchestration run, the engine checks tracking states and generates structural additions:
+text
+aws_eip.ec2_eip: Refreshing state... [id=eipalloc-26e7f7b2963df5507]
+aws_instance.ec2: Refreshing state... [id=i-19e16a42102cf3057]
+
+Terraform will perform the following actions:
+
+  # aws_eip_association.eip_assoc will be created
+  + resource "aws_eip_association" "eip_assoc" {
+      + allocation_id        = "eipalloc-26e7f7b2963df5507"
+      + id                   = (known after apply)
+      + instance_id          = (known after apply)
+    }
+
+  # aws_instance.devops_ec2 will be created
+  + resource "aws_instance" "devops_ec2" {
+      + ami                  = "ami-0c7217cdde317cfec"
+      + instance_type        = "t2.micro"
+      + tags                 = {
+          + "Name" = "devops-ec2"
+        }
+    }
+
+Plan: 2 to add, 0 to change, 1 to destroy.
