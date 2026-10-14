@@ -1,0 +1,44 @@
+# Attach Policy Using Terraform
+
+## Objective
+Attach an existing IAM policy (`iampolicy_ravi`) to an existing IAM user (`iamuser_ravi`) on AWS using Terraform to maintain modular control and proper security posture during cloud migration tasks.
+
+## Requirements
+* **IAM User**: `iamuser_ravi`
+* **IAM Policy**: `iampolicy_ravi`
+* **Working Directory**: `/home/bob/terraform`
+* **Tool**: Terraform (`main.tf`)
+
+## Configuration Details
+```hcl
+resource "aws_iam_user" "user" {
+  name = "iamuser_ravi"
+  tags = {
+    Name = "iamuser_ravi"
+  }
+}
+
+resource "aws_iam_policy" "policy" {
+  name        = "iampolicy_ravi"
+  description = "IAM policy allowing EC2 read actions for ravi"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ec2:Read*"]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_user_policy_attachment" "ravi_attachment" {
+  user       = aws_iam_user.user.name
+  policy_arn = aws_iam_policy.policy.arn
+}
+Solution Documentation
+Resource Definition: Defined the IAM user, the corresponding read-only EC2 IAM policy, and the attachment resource inside the unified main.tf file.
+
+Infrastructure Provisioning: Applied the configuration using Terraform to link the policy securely to the user entity.
+EOF
