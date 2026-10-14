@@ -1,0 +1,58 @@
+# AWS S3 Bucket Versioning Configuration via Terraform
+
+This project provisions an Amazon S3 bucket with versioning enabled using Terraform to ensure data protection, recovery against accidental deletion, and data integrity.
+
+## Prerequisites
+
+* Terraform installed locally.
+* AWS CLI configured with appropriate credentials.
+
+## Configuration Details
+
+The configuration is defined in `main.tf` within the working directory (`/home/bob/terraform`). It consists of two main resources:
+
+1. **`aws_s3_bucket`**: Manages the S3 bucket named `datacenter-s3-605789677`.
+2. **`aws_s3_bucket_versioning`**: Enables bucket versioning to maintain multiple variants of an object in the same bucket.
+
+### `main.tf`
+
+```hcl
+resource "aws_s3_bucket" "s3_ran_bucket" {
+  bucket = "datacenter-s3-605789677"
+  acl    = "private"
+
+  tags = {
+    Name        = "datacenter-s3-605789677"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "versioning" {
+  bucket = "datacenter-s3-605789677"
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+How to Apply
+Open your terminal and navigate to the Terraform directory:
+
+Bash
+cd /home/bob/terraform
+Initialize the working directory to download required providers:
+
+Bash
+terraform init
+Apply the infrastructure configuration:
+
+Bash
+terraform apply -auto-approve
+Verification
+To verify that versioning is successfully enabled on the S3 bucket, run the following AWS CLI command:
+
+Bash
+aws s3api get-bucket-versioning --bucket datacenter-s3-605789677
+Expected output:
+
+JSON
+{
+    "Status": "Enabled"
+}
