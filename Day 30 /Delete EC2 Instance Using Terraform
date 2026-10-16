@@ -1,0 +1,59 @@
+Delete EC2 Instance Using Terraform
+Task Overview
+Temporarily clean up an unused AWS EC2 instance named devops-ec2 in the us-east-1 region using Terraform while ensuring the provisioning code remains intact for future use.
+
+Step-by-Step Instructions
+Step 1: Open the Terminal
+Open the integrated terminal in your VS Code environment on the iac-server node.
+
+Step 2: Navigate to the Terraform Working Directory
+Go to the directory where your configuration files (main.tf, provider.tf, etc.) are located:
+
+Bash
+cd /home/bob/terraform
+Step 3: Target and Destroy the EC2 Instance
+Run the destroy command targeting the specific EC2 resource (aws_instance.ec2) to terminate the instance without deleting your configuration files:
+
+Bash
+terraform destroy -target=aws_instance.ec2
+Example Terminal Output:
+Plaintext
+aws_instance.ec2: Refreshing state... [id=i-a397bc881c6044f95]
+
+Terraform used the selected providers to generate the
+following execution plan. Resource actions are indicated with
+the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # aws_instance.ec2 will be destroyed
+  - resource "aws_instance" "ec2" {
+      ...
+      - id                                   = "i-a397bc881c6044f95" -> null
+      - instance_state                       = "running" -> null
+      - instance_type                        = "t2.micro" -> null
+      - tags                                 = {
+          - "Name" = "devops-ec2"
+        } -> null
+      ...
+    }
+
+Plan: 0 to add, 0 to change, 1 to destroy.
+Step 4: Confirm the Destruction
+When prompted by Terraform to confirm, type:
+
+Plaintext
+yes
+Example Completion Output:
+Plaintext
+aws_instance.ec2: Destroying... [id=i-a397bc881c6044f95]
+aws_instance.ec2: Still destroying... [id=i-a397bc881c6044f95, 10s elapsed]
+aws_instance.ec2: Destruction complete after 10s
+
+Destroy complete! Resources: 1 destroyed.
+Step 5: Verify Instance State
+To ensure the instance has been completely terminated and the state is clean, verify that no pending resources remain:
+
+Bash
+terraform plan
