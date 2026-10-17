@@ -1,0 +1,22 @@
+# Terraform IAM Group Cleanup - iamgroup_ammar
+
+This repository contains the Terraform configuration used to manage and clean up temporary AWS Identity and Access Management (IAM) resources as part of the Nautilus DevOps environment migration.
+
+## Overview
+
+During the cloud infrastructure migration and optimization phase, temporary resources are occasionally provisioned for one-time testing or operations. This task covers the safe destruction and state management of the `iamgroup_ammar` IAM group (`aws_iam_group.this`) while preserving the underlying infrastructure provisioning code for future deployment.
+
+## Architecture & Resources
+
+* **Terraform Provider:** `aws`
+* **Resource Type:** `aws_iam_group`
+* **Resource Identifier:** `aws_iam_group.this` (Group Name: `iamgroup_ammar`)
+
+## Repository Structure
+
+```text
+├── main.tf                    # Core Terraform configuration defining AWS resources
+├── provider.tf                # Provider definitions and region configurations
+├── terraform.tfstate          # Local state file tracking managed infrastructure
+├── terraform.tfstate.backup   # Previous state backup
+└── README.md                  # Project documentation
