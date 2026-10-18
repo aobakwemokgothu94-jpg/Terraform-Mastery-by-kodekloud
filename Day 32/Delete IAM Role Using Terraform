@@ -1,0 +1,44 @@
+# Terraform IAM Role Cleanup - Nautilus DevOps
+
+## Task Overview
+As part of the Nautilus DevOps environment optimization and cloud cleanup initiative, unnecessary resources created for one-time use were targeted for removal. Specifically, the objective was to delete the IAM role `iamrole_jim` managed via Terraform while preserving the provisioning code blocks in the configuration files (`main.tf`) for potential future deployments.
+
+## Environment Details
+* **Working Directory:** `/home/bob/terraform`
+* **Cloud Provider:** AWS
+* **Tools Used:** Terraform, AWS CLI
+
+---
+
+## Step-by-Step Execution
+
+### 1. Inspect Terraform State
+Verify the existing resources tracked in the Terraform state file to locate the correct resource address for the target IAM role:
+```bash
+cd /home/bob/terraform
+terraform state list
+Output:
+
+Plaintext
+aws_iam_role.role
+2. Remove the Resource from Terraform State
+To stop managing the IAM role and prevent Terraform from destroying the actual AWS resource when configuration blocks are preserved, remove it from the state:
+
+Bash
+terraform state rm aws_iam_role.role
+Output:
+
+Plaintext
+Removed aws_iam_role.role
+Successfully removed 1 resource instance(s).
+3. Verify AWS Resource Deletion
+Confirm whether the role still exists in AWS and clear it out if necessary:
+
+Bash
+aws iam delete-role --role-name iamrole_jim
+(Note: If the role was already purged or never provisioned directly under that exact entity name in AWS, a NoSuchEntity error may occur, confirming the environment is clean).
+
+Verification & Completion
+State Management: The IAM role was successfully untracked from the Terraform state file (terraform.tfstate).
+
+Code Integrity: The provisioning blocks inside main.tf remain fully intact, allowing the Nautilus DevOps team to re-provision the IAM role whenever required in the future.
