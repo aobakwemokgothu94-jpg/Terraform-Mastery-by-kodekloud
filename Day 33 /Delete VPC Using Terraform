@@ -1,0 +1,34 @@
+Delete VPC using Terraform
+
+This repository contains the Terraform configuration used to manage infrastructure migration to AWS for the Nautilus DevOps team, specifically demonstrating how to destroy a targeted VPC resource while preserving the provisioning code.
+
+## Objective
+Incremental infrastructure migration involves creating and removing AWS resources across different regions. This task covers deleting the VPC named `devops-vpc` located in the `us-east-1` region using Terraform without losing the underlying definition files, allowing for future re-provisioning.
+
+## Prerequisites
+* Terraform installed locally.
+* AWS credentials configured with appropriate permissions.
+* A working directory located at `/home/bob/terraform`.
+
+## Configuration Files
+
+* **`main.tf`**: Contains the resource definitions, including the `aws_vpc` resource (`aws_vpc.this`).
+* **`provider.tf`**: Configures the AWS provider and target region (`us-east-1`).
+
+## Execution Steps
+
+1. Navigate to the Terraform working directory:
+   ```bash
+   cd /home/bob/terraform
+List resources currently tracked in the Terraform state to verify the resource address:
+
+Bash
+terraform state list
+Destroy the specific VPC resource while keeping the configuration code intact in main.tf:
+
+Bash
+terraform destroy -target=aws_vpc.this
+Verify that no pending changes remain:
+
+Bash
+terraform plan
