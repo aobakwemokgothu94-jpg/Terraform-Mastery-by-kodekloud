@@ -1,0 +1,35 @@
+# AWS S3 File Upload via Terraform
+
+Automated the deployment of an S3 object resource using Terraform to transfer an on-premise file to an existing AWS S3 bucket on the Nautilus DevOps infrastructure.
+
+## Task Overview
+
+- **Objective:** Copy `/tmp/xfusion.txt` to the existing S3 bucket `xfusion-cp-76354121`.
+- **Tooling:** Terraform (`aws_s3_object` resource)
+- **Working Directory:** `/home/bob/terraform`
+
+---
+
+## Configuration
+
+The following resource block was added to the existing `main.tf` file:
+
+```hcl
+resource "aws_s3_object" "xfusion_file" {
+  bucket = "xfusion-cp-76354121"
+  key    = "xfusion.txt"
+  source = "/tmp/xfusion.txt"
+}
+Execution & Verification
+Navigated to the Terraform working directory and applied the configuration:
+
+Bash
+cd /home/bob/terraform
+terraform apply -auto-approve
+Verified the successful upload:
+
+Plaintext
+aws_s3_object.xfusion_file: Creating...
+aws_s3_object.xfusion_file: Creation complete after 0s [id=xfusion.txt]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
