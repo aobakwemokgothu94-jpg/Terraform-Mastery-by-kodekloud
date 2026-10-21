@@ -1,0 +1,44 @@
+# AWS VPC Terraform Automation
+
+This project automates the creation of an AWS VPC using Terraform to streamline networking infrastructure provisioning for the Nautilus DevOps team.
+
+## Requirements
+- Create an AWS VPC named `devops-vpc`.
+- Store the VPC name in a Terraform variable named `KKE_vpc`.
+- Configure the VPC with a CIDR block of `10.0.0.0/16`.
+
+## Project Structure
+- `variables.tf`: Contains input variable definitions (including `KKE_vpc`).
+- `main.tf`: Contains the resource definitions (such as `aws_vpc`) referencing the variables.
+- `provider.tf`: Defines the AWS provider and target region.
+
+## Usage
+Initialize and apply the configuration:
+
+```bash
+terraform init
+terraform apply -auto-approve
+
+---
+
+### 2. Preview / Summary of Configuration Files
+
+To confirm everything is correctly aligned with the task requirements, here is a quick review of the active files in your working directory:
+
+* **`variables.tf`**
+  ```hcl
+  variable "KKE_vpc" {
+    type        = string
+    description = "The name of the VPC"
+    default     = "devops-vpc"
+  }
+main.tf
+
+Terraform
+resource "aws_vpc" "main" {
+  cidr_block = "10.0.0.0/16"
+
+  tags = {
+    Name = var.KKE_vpc
+  }
+}
