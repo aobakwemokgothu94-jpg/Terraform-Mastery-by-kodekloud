@@ -1,0 +1,44 @@
+# AWS Security Group Provisioning with Terraform
+
+This project automates the creation of an AWS Security Group using Terraform variables on the Nautilus infrastructure.
+
+## Project Structure
+
+- `main.tf`: Contains the primary resource definition for the AWS Security Group, referencing input variables.
+- `variables.tf`: Defines input variables, including `KKE_sg` which sets the security group name to `xfusion-sg`.
+- `provider.tf`: Configures the required AWS provider.
+
+## Execution
+
+1. Initialize Terraform:
+   ```bash
+   terraform init
+Apply the configuration:
+
+Bash
+terraform apply -auto-approve
+
+You can write this directly to your `README.md` file using the terminal:
+
+```bash
+cat << 'EOF' > README.md
+# AWS Security Group Provisioning with Terraform
+
+This project automates the creation of an AWS Security Group using Terraform variables on the Nautilus infrastructure.
+
+## Project Structure
+
+- `main.tf`: Contains the primary resource definition for the AWS Security Group, referencing input variables.
+- `variables.tf`: Defines input variables, including `KKE_sg` which sets the security group name to `xfusion-sg`.
+- `provider.tf`: Configures the required AWS provider.
+
+## Execution
+
+1. Initialize Terraform:
+   ```bash
+   terraform init
+Apply the configuration:
+
+Bash
+terraform apply -auto-approve
+EOF
