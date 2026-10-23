@@ -1,0 +1,69 @@
+# AWS Elastic IP Provisioning with Terraform
+
+This documentation outlines the Terraform configuration used to provision an AWS Elastic IP (EIP) for the Nautilus DevOps cloud migration initiative.
+
+## Overview
+
+As part of the phased migration of infrastructure to the AWS cloud, external access for specific workloads requires a dedicated Elastic IP address. This task uses Terraform to dynamically provision and tag the Elastic IP using variables.
+
+---
+
+## Configuration Files
+
+### 1. `provider.tf`
+Configures the required Terraform version and provider constraints for AWS.
+
+```hcl
+terraform {
+  required_version = ">= 1.0.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 4.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+2. variables.tf
+Defines the input variable KKE_eip to store the name of the Elastic IP resource.
+
+Terraform
+variable "KKE_eip" {
+  type        = string
+  description = "The name for the Elastic IP"
+  default     = "nautilus-eip"
+}
+3. main.tf
+Contains the resource definition for the AWS Elastic IP (aws_eip), referencing the variable for tagging.
+
+Terraform
+resource "aws_eip" "nautilus_eip" {
+  domain = "vpc"
+
+  tags = {
+    Name = var.KKE_eip
+  }
+}
+Execution & Deployment
+Navigate to the Terraform workspace directory:
+
+Bash
+cd /home/bob/terraform
+Initialize the working directory to download required provider plugins:
+
+Bash
+terraform init
+Apply the configuration to create the resource:
+
+Bash
+terraform apply -auto-approve
+Verification Preview
+Plaintext
+Plan: 1 to add, 0 to change, 0 to destroy.
+aws_eip.nautilus_eip: Creating...
+aws_eip.nautilus_eip: Creation complete after 1s [id=eipalloc-9e415f0bf9bc91434]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
