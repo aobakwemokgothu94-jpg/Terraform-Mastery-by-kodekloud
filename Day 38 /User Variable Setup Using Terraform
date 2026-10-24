@@ -1,0 +1,241 @@
+# Create an AWS IAM User Using Terraform
+
+## Task Overview
+
+**Project:** Nautilus DevOps  
+**Task:** Create an AWS IAM User Using Terraform  
+**Working Directory:** `/home/bob/terraform`  
+**IAM Username:** `iamuser_anita`  
+**Terraform Variable:** `KKE_user`  
+**Status:** Successfully created and verified
+
+## Objective
+
+The objective of this task was to automate AWS IAM user creation using Terraform. The IAM username had to be stored in a variable named `KKE_user`, with configuration values defined in `variables.tf` and the IAM resource declared in `main.tf`.
+
+## Requirements
+
+- Create an AWS IAM user named `iamuser_anita`.
+- Store the username in a variable named `KKE_user`.
+- Define the variable in `variables.tf`.
+- Reference the variable from `main.tf`.
+- Work in `/home/bob/terraform`.
+- Initialize, validate, apply, and verify the Terraform configuration.
+
+## 1. Working Directory
+
+The Terraform working directory was opened and checked using:
+
+```bash
+cd /home/bob/terraform
+pwd
+ls -la
+```
+
+### Terminal Preview
+
+```text
+/home/bob/terraform
+
+README.MD
+provider.tf
+```
+
+The existing `provider.tf` file was preserved.
+
+## 2. Create variables.tf
+
+The `variables.tf` file defines the required variable `KKE_user`, with the default value `iamuser_anita`.
+
+### Configuration
+
+```hcl
+variable "KKE_user" {
+  description = "IAM username to create"
+  type        = string
+  default     = "iamuser_anita"
+}
+```
+
+### Command Used
+
+```bash
+cat > variables.tf <<'EOF'
+variable "KKE_user" {
+  description = "IAM username to create"
+  type        = string
+  default     = "iamuser_anita"
+}
+EOF
+```
+
+## 3. Create main.tf
+
+The `main.tf` file declares the AWS IAM user resource and references the variable using `var.KKE_user`.
+
+### Configuration
+
+```hcl
+resource "aws_iam_user" "KKE_user" {
+  name = var.KKE_user
+}
+```
+
+### Command Used
+
+```bash
+cat > main.tf <<'EOF'
+resource "aws_iam_user" "KKE_user" {
+  name = var.KKE_user
+}
+EOF
+```
+
+## 4. Terraform Initialization and Validation
+
+Terraform was initialized to install the required provider and prepare the working directory.
+
+### Commands
+
+```bash
+terraform init
+terraform validate
+```
+
+### Terminal Preview
+
+```text
+Initializing the backend...
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "5.91.0"...
+- Installing hashicorp/aws v5.91.0...
+- Installed hashicorp/aws v5.91.0
+
+Terraform has been successfully initialized!
+
+Success! The configuration is valid.
+```
+
+**Result:** Terraform initialization and configuration validation succeeded.
+
+## 5. Review the Terraform Plan
+
+Before applying the configuration, the planned infrastructure changes were reviewed.
+
+### Command
+
+```bash
+terraform plan
+```
+
+### Terminal Preview
+
+```text
+Terraform will perform the following actions:
+
+  # aws_iam_user.KKE_user will be created
+  + resource "aws_iam_user" "KKE_user" {
+      + arn           = (known after apply)
+      + force_destroy = false
+      + id            = (known after apply)
+      + name          = "iamuser_anita"
+      + path          = "/"
+      + tags_all      = (known after apply)
+      + unique_id     = (known after apply)
+    }
+
+Plan: 1 to add, 0 to change, 0 to destroy.
+```
+
+**Result:** The plan showed that one IAM user would be created, with no existing resources changed or destroyed.
+
+## 6. Apply the Terraform Configuration
+
+The configuration was applied after reviewing the plan and approving the operation.
+
+### Command
+
+```bash
+terraform apply
+```
+
+The confirmation prompt was answered with:
+
+```text
+Enter a value: yes
+```
+
+### Actual Terminal Output
+
+```text
+aws_iam_user.KKE_user: Creating...
+aws_iam_user.KKE_user: Creation complete after 0s [id=iamuser_anita]
+
+Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+```
+
+**Result:** Terraform successfully created the IAM user `iamuser_anita`.
+
+## 7. Verify the Terraform State
+
+The created resource was checked in Terraform state to verify its recorded configuration.
+
+### Command
+
+```bash
+terraform state show aws_iam_user.KKE_user
+```
+
+### Actual Terminal Output
+
+```text
+# aws_iam_user.KKE_user:
+resource "aws_iam_user" "KKE_user" {
+    arn                  = "arn:aws:iam::000000000000:user/iamuser_anita"
+    force_destroy        = false
+    id                   = "iamuser_anita"
+    name                 = "iamuser_anita"
+    path                 = "/"
+    permissions_boundary = null
+    tags_all             = {}
+    unique_id            = "mt8sc1i4zwblk22e4nvv"
+}
+```
+
+**Result:** Terraform state confirms that the resource exists with the expected username. The account identifier shown is from the lab environment and may be a placeholder.
+
+## 8. Final File Structure
+
+The Terraform working directory contains the configuration files below, along with the existing provider configuration and generated Terraform initialization files.
+
+```text
+/home/bob/terraform/
+├── main.tf
+├── variables.tf
+├── provider.tf
+├── README.MD
+└── .terraform.lock.hcl
+```
+
+The `.terraform` directory may also be present after initialization.
+
+## 9. Task Summary
+
+| Requirement | Result |
+|---|---|
+| Working directory set to `/home/bob/terraform` | Completed |
+| `KKE_user` variable defined | Completed |
+| Username set to `iamuser_anita` | Completed |
+| `variables.tf` created | Completed |
+| `main.tf` references `var.KKE_user` | Completed |
+| Terraform initialized | Successful |
+| Terraform configuration validated | Successful |
+| Terraform plan reviewed | Successful |
+| IAM user created | Successful |
+| Terraform state verified | Successful |
+
+## Conclusion
+
+The Nautilus DevOps Terraform IAM user task was completed successfully. The required variable was defined in `variables.tf`, and `main.tf` referenced it to create the AWS IAM user `iamuser_anita`. Terraform initialization and validation succeeded, the plan showed one resource to add, and the apply operation completed with one resource added and no changes or destructions. Finally, `terraform state show` confirmed that the created IAM user was recorded in Terraform state.
+
+The terminal evidence confirms successful resource creation. Final acceptance should be checked in the Nautilus DevOps lab portal.
