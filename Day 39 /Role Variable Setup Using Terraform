@@ -1,0 +1,53 @@
+Terraform AWS IAM Role Configuration
+This task involved automating the creation of an AWS IAM role using Terraform with a variable-driven configuration name.
+
+Task Overview
+Environment: IAC Server / VS Code Workspace (/home/bob/terraform)
+
+Objective: Create an AWS IAM role named via a Terraform variable.
+
+Requirements:
+
+Store the IAM role name (iamrole_anita) in a variable named KKE_iamrole inside variables.tf.
+
+Structure the Terraform configuration with a main.tf file referencing variables.tf.
+
+Configuration Files
+1. variables.tf
+Terraform
+variable "KKE_iamrole" {
+  description = "The name of the AWS IAM role"
+  type        = string
+  default     = "iamrole_anita"
+}
+2. main.tf
+Terraform
+resource "aws_iam_role" "anita_role" {
+  name = var.KKE_iamrole
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+Execution Steps
+Initialize Terraform:
+
+Bash
+terraform init
+Apply Configuration:
+
+Bash
+terraform apply -auto-approve
+Verification & Results
+Apply Output: Apply complete! Resources: 1 added, 0 changed, 0 destroyed.
+
+Result: The IAM role iamrole_anita was successfully created and provisioned on AWS through the configured Terraform script.
