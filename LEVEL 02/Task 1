@@ -1,0 +1,29 @@
+# Terraform AWS VPC and Subnet Configuration
+
+This project provisions an AWS VPC and a Subnet with an explicit dependency configuration using Terraform.
+
+## Objectives
+- Create an AWS VPC named `nautilus-vpc`.
+- Create an AWS Subnet named `nautilus-subnet` that explicitly depends on the VPC using the `depends_on` argument.
+- Parameterize resource names using input variables (`variables.tf` and `terraform.tfvars`).
+- Output the provisioned VPC and Subnet names (`outputs.tf`).
+
+## File Structure
+- `main.tf`: Contains resource definitions for `aws_vpc` and `aws_subnet` with `depends_on`.
+- `variables.tf`: Defines input variables `KKE_VPC_NAME` and `KKE_SUBNET_NAME`.
+- `terraform.tfvars`: Assigns values to the input variables.
+- `outputs.tf`: Defines output variables for the resource names.
+
+## Usage
+1. Initialize the Terraform working directory:
+   ```bash
+   terraform init
+Apply the configuration:
+
+Bash
+terraform apply -auto-approve
+Verify that the configuration is fully in sync:
+
+Bash
+terraform plan
+(Expected output: No changes. Your infrastructure matches the configuration.)
