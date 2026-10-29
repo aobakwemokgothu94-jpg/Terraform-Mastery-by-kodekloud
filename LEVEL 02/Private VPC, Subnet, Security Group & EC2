@@ -1,0 +1,191 @@
+# Terraform AWS Infrastructure — Private VPC, Subnet, Security Group & EC2
+
+## 1. Project Overview
+
+This project uses Terraform to provision and manage a private AWS-style infrastructure environment through the configured AWS-compatible endpoint at `http://aws:4566`.
+
+The infrastructure consists of:
+- A Virtual Private Cloud (VPC)
+- A private subnet
+- A security group
+- An Amazon EC2 instance without a public IP address
+- Terraform variables and outputs for configuration and verification
+
+## 2. Objectives
+
+- Create a VPC with a configurable CIDR block.
+- Create a private subnet inside the VPC.
+- Configure a security group that permits inbound traffic from the VPC CIDR.
+- Deploy an EC2 instance in the private subnet.
+- Prevent automatic assignment of a public IP address.
+- Validate the Terraform configuration and verify the infrastructure plan.
+
+## 3. Infrastructure Details
+
+| Resource | Name | Configuration |
+|---|---|---|
+| VPC | `nautilus-priv-vpc` | `10.0.0.0/16` |
+| Subnet | `nautilus-priv-subnet` | `10.0.1.0/24` |
+| Security group | `nautilus-priv-sg` | Inbound traffic permitted from the VPC CIDR |
+| EC2 instance | `nautilus-priv-ec2` | `t2.micro` |
+| Instance private IP | — | `10.0.1.4` |
+| Public IP | — | None |
+
+### Resource identifiers
+
+| Resource | ID |
+|---|---|
+| VPC | `vpc-52508ddfcbe43a289` |
+| Subnet | `subnet-b9db999384437d6a0` |
+| Security group | `sg-e793d42214897ee09` |
+| EC2 instance | `i-47ec40f0b9f86129d` |
+| Network interface | `eni-29d7a9f2c95868718` |
+
+## 4. Terraform Configuration
+
+### Variables
+
+The configuration uses these variables:
+
+- `KKE_VPC_CIDR` — VPC CIDR block, default `10.0.0.0/16`
+- `KKE_SUBNET_CIDR` — subnet CIDR block, default `10.0.1.0/24`
+
+### VPC and subnet
+
+The VPC enables DNS support and DNS hostnames. The subnet uses the configured VPC and disables automatic public IP assignment.
+
+### Security group
+
+The security group:
+- Allows inbound traffic from the VPC CIDR.
+- Allows outbound traffic to `0.0.0.0/0`.
+- Is associated with the private VPC.
+
+### EC2 instance
+
+The EC2 instance uses an Amazon Linux 2 AMI selected through a Terraform data source. It is deployed in the private subnet with instance type `t2.micro` and public IP assignment disabled.
+
+The instance configuration includes:
+
+```hcl
+lifecycle {
+  ignore_changes = [vpc_security_group_ids]
+}
+```
+
+This lifecycle setting was added as a workaround for a persistent difference reported by the AWS-compatible lab API. The network interface inspection confirmed the expected security group ID was attached, although the instance-level API response reported an empty security group list.
+
+**Limitation:** `ignore_changes` suppresses Terraform's detection of future changes to this attribute. It should be reviewed if the lab requires normal ongoing drift detection.
+
+## 5. Deployment and Verification Commands
+
+The following commands were used to validate and inspect the configuration:
+
+```bash
+terraform fmt
+terraform validate
+terraform plan
+```
+
+To inspect the EC2 instance:
+
+```bash
+aws --endpoint-url=http://aws:4566 ec2 describe-instances \
+  --instance-ids i-47ec40f0b9f86129d \
+  --region us-east-1 \
+  --query 'Reservations[0].Instances[0].{State:State.Name,PrivateIP:PrivateIpAddress,PublicIP:PublicIpAddress,Subnet:SubnetId,Groups:SecurityGroups}' \
+  --output json
+```
+
+To inspect the security groups attached to the network interface:
+
+```bash
+aws --endpoint-url=http://aws:4566 ec2 describe-network-interfaces \
+  --network-interface-ids eni-29d7a9f2c95868718 \
+  --region us-east-1 \
+  --query 'NetworkInterfaces[0].Groups' \
+  --output json
+```
+
+## 6. Verification Results
+
+### Terraform validation
+
+The configuration validation returned:
+
+```text
+Success! The configuration is valid.
+```
+
+### Terraform plan
+
+After adding the lifecycle workaround, the normal plan returned:
+
+```text
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against your
+configuration and found no differences, so no changes
+are needed.
+```
+
+### Network interface security group
+
+The network interface query returned:
+
+```json
+[
+  {
+    "GroupId": "sg-e793d42214897ee09",
+    "GroupName": "nautilus-priv-sg"
+  }
+]
+```
+
+### EC2 instance
+
+The recorded instance details showed:
+- State: `running`
+- Private IP: `10.0.1.4`
+- Public IP: `null`
+- Subnet: `subnet-b9db999384437d6a0`
+
+The instance-level response reported an empty `Groups` list, which differed from the network interface result. This discrepancy is documented rather than treated as a confirmed security-group failure.
+
+## 7. Terraform Outputs
+
+The configured outputs are:
+
+| Output | Expected value |
+|---|---|
+| `KKE_vpc_name` | `nautilus-priv-vpc` |
+| `KKE_subnet_name` | `nautilus-priv-subnet` |
+| `KKE_ec2_private` | `nautilus-priv-ec2` |
+
+To display the outputs:
+
+```bash
+terraform output
+```
+
+## 8. Preview of the Final Result
+
+```text
+Terraform validation: SUCCESS
+
+VPC:             nautilus-priv-vpc
+Subnet:          nautilus-priv-subnet
+Security Group:  nautilus-priv-sg
+EC2 Instance:    nautilus-priv-ec2
+Private IP:      10.0.1.4
+Public IP:       None
+
+Normal Terraform Plan:
+No changes. Your infrastructure matches the configuration.
+```
+
+## 9. Conclusion
+
+The Terraform configuration is valid, and the normal plan reports no changes with the lifecycle workaround in place. The deployed VPC, subnet, security group, and EC2 instance were verified through the available Terraform and AWS-compatible CLI outputs.
+
+The remaining completion check is the lab platform's own verification or submission result. That result should be recorded once the lab confirms successful completion.
