@@ -1,0 +1,44 @@
+# Terraform Resource Replacement Lab
+
+## Objective
+Demonstrate the use of the Terraform CLI `-replace` option to forcefully destroy and recreate an existing AWS EC2 instance without changing its configuration files.
+
+---
+
+## Task Details
+* **Working Directory:** `/home/bob/terraform`
+* **Target Resource Name:** `aws_instance.web_server` (with a tag name of `datacenter-ec2`)
+* **Requirement:** Successfully recreate the instance resulting in a new instance ID, and ensure `terraform plan` returns no pending changes.
+
+---
+
+## Execution Steps
+
+### 1. Navigate to the Terraform Directory
+Open the terminal in VS Code and ensure you are in the correct working directory:
+```bash
+cd /home/bob/terraform
+2. Forcefully Recreate the Instance
+Run the terraform apply command with the -replace flag targeting the EC2 resource:
+
+Bash
+terraform apply -replace="aws_instance.web_server"
+Confirmation: Type yes when prompted.
+
+Result: Terraform successfully destroyed the old instance (i-41e602ae45c445788) and provisioned a brand-new one with a different ID (i-0fdb02b447ae99a5a).
+
+3. Verify Infrastructure State
+Run terraform plan to verify that the state is clean and matches the configuration:
+
+Bash
+terraform plan
+Expected Output:
+
+No changes. Your infrastructure matches the configuration.
+
+Summary of Results
+Previous Instance ID: i-41e602ae45c445788
+
+New Instance ID: i-0fdb02b447ae99a5a
+
+Final Status: Complete. The infrastructure matches the configuration with no pending changes.
