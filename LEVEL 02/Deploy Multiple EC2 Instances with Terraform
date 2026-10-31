@@ -1,0 +1,356 @@
+# Terraform EC2 Instance Deployment Using Count
+
+## Project Overview
+
+This project demonstrates infrastructure provisioning using **Terraform**. It creates three Amazon EC2 instances using Terraform's `count` meta-argument, allowing multiple instances to be managed through a single resource block.
+
+The deployment uses the Amazon Linux 2 AMI, `t2.micro` instance type, and the existing EC2 key pair `devops-key`.
+
+## Objectives
+
+- Provision three EC2 instances using Terraform.
+- Use the `count` meta-argument to manage multiple resources.
+- Retrieve the latest Amazon Linux 2 AMI through a Terraform data source.
+- Configure reusable input variables.
+- Use Terraform locals to reference the AMI ID.
+- Define an output displaying the instance names.
+- Verify that the deployed infrastructure matches the Terraform configuration.
+
+## Project Structure
+
+```text
+terraform/
+├── main.tf
+├── variables.tf
+├── locals.tf
+├── terraform.tfvars
+├── outputs.tf
+├── provider.tf
+├── .terraform.lock.hcl
+└── README.MD
+```
+
+## Configuration Details
+
+| Component | Configuration |
+|---|---|
+| Number of instances | 3 |
+| Instance type | t2.micro |
+| Key pair | devops-key |
+| AMI | Latest Amazon Linux 2 |
+| Resource type | aws_instance |
+| Terraform meta-argument | count |
+| AWS region | us-east-1 |
+| Resource naming prefix | devops-instance |
+
+## 1. Main Terraform Configuration
+
+**File: `main.tf`**
+
+```hcl
+resource "aws_instance" "kke_instance" {
+  count         = var.KKE_INSTANCE_COUNT
+  ami           = local.AMI_ID
+  instance_type = var.KKE_INSTANCE_TYPE
+  key_name      = var.KKE_KEY_NAME
+
+  tags = {
+    Name = "${var.KKE_INSTANCE_PREFIX}-${count.index + 1}"
+  }
+}
+```
+
+This resource uses `count` to create three instances from one resource definition. The `count.index` expression generates unique instance names.
+
+## 2. Input Variables
+
+**File: `variables.tf`**
+
+```hcl
+variable "KKE_INSTANCE_COUNT" {
+  type        = number
+  description = "Number of EC2 instances"
+}
+
+variable "KKE_INSTANCE_TYPE" {
+  type        = string
+  description = "EC2 instance type"
+}
+
+variable "KKE_KEY_NAME" {
+  type        = string
+  description = "EC2 key pair name"
+}
+
+variable "KKE_INSTANCE_PREFIX" {
+  type        = string
+  description = "EC2 instance naming prefix"
+}
+```
+
+These variables make the configuration reusable and allow deployment settings to be managed separately from the EC2 resource.
+
+## 3. AMI Data Source and Local Variable
+
+**File: `locals.tf`**
+
+```hcl
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+locals {
+  AMI_ID = data.aws_ami.amazon_linux_2.id
+}
+```
+
+The data source searches for the most recent matching Amazon Linux 2 AMI. The local variable `AMI_ID` makes the retrieved AMI available to the EC2 resource.
+
+## 4. Variable Assignments
+
+**File: `terraform.tfvars`**
+
+```hcl
+KKE_INSTANCE_COUNT  = 3
+KKE_INSTANCE_TYPE   = "t2.micro"
+KKE_KEY_NAME        = "devops-key"
+KKE_INSTANCE_PREFIX = "devops-instance"
+```
+
+## 5. Terraform Output
+
+**File: `outputs.tf`**
+
+```hcl
+output "kke_instance_names" {
+  description = "Names of the EC2 instances created"
+  value       = [for instance in aws_instance.kke_instance : instance.tags["Name"]]
+}
+```
+
+This output returns the names of all three provisioned EC2 instances.
+
+---
+
+# Deployment Procedure
+
+The following commands were used during the deployment.
+
+### Step 1: Initialize Terraform
+
+```bash
+terraform init
+```
+
+**Terminal preview:**
+
+```text
+Initializing the backend...
+Initializing provider plugins...
+
+- Finding hashicorp/aws versions matching "5.91.0"...
+- Installing hashicorp/aws v5.91.0...
+- Installed hashicorp/aws v5.91.0
+
+Terraform has been successfully initialized!
+```
+
+### Step 2: Format and Validate
+
+```bash
+terraform fmt
+terraform validate
+```
+
+**Terminal preview:**
+
+```text
+Success! The configuration is valid.
+```
+
+### Step 3: Review the Execution Plan
+
+```bash
+terraform plan
+```
+
+**Terminal preview:**
+
+```text
+Plan: 3 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+
+kke_instance_names = [
+  "devops-instance-1",
+  "devops-instance-2",
+  "devops-instance-3",
+]
+```
+
+The plan confirmed that Terraform would create exactly three EC2 instances.
+
+### Step 4: Apply the Configuration
+
+```bash
+terraform apply
+```
+
+The deployment was approved with:
+
+```text
+Enter a value: yes
+```
+
+**Terminal preview:**
+
+```text
+aws_instance.kke_instance[0]: Creation complete
+aws_instance.kke_instance[1]: Creation complete
+aws_instance.kke_instance[2]: Creation complete
+
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+```
+
+### Step 5: Verify Terraform Outputs
+
+```bash
+terraform output kke_instance_names
+```
+
+**Actual output:**
+
+```text
+[
+  "devops-instance-1",
+  "devops-instance-2",
+  "devops-instance-3",
+]
+```
+
+### Step 6: Verify Terraform State
+
+```bash
+terraform state list
+```
+
+**Actual output:**
+
+```text
+data.aws_ami.amazon_linux_2
+aws_instance.kke_instance[0]
+aws_instance.kke_instance[1]
+aws_instance.kke_instance[2]
+```
+
+### Step 7: Final Infrastructure Verification
+
+```bash
+terraform plan
+```
+
+**Final terminal preview:**
+
+```text
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure
+against your configuration and found no differences,
+so no changes are needed.
+```
+
+---
+
+# Deployment Results
+
+## Provisioned EC2 Instances
+
+| Instance | Name | Instance Type |
+|---|---|---|
+| 1 | devops-instance-1 | t2.micro |
+| 2 | devops-instance-2 | t2.micro |
+| 3 | devops-instance-3 | t2.micro |
+
+## Resource IDs
+
+| Instance | EC2 Instance ID |
+|---|---|
+| devops-instance-1 | i-59c3bb1b8d067573b |
+| devops-instance-2 | i-ad5c9464c5d63bd36 |
+| devops-instance-3 | i-fcdf69dd2979da20b |
+
+## Final Verification Summary
+
+| Verification | Result |
+|---|---|
+| Terraform initialization | Successful |
+| Terraform formatting | Successful |
+| Terraform validation | Successful |
+| Terraform plan | 3 resources to add |
+| Terraform apply | Successful |
+| EC2 instances created | 3 |
+| Terraform output | Verified |
+| Terraform state | Verified |
+| Final Terraform plan | No changes |
+
+**Final deployment status: SUCCESSFUL**
+
+All three EC2 instances were created successfully. Terraform state verification confirmed the three managed instances, and the final plan confirmed that the infrastructure matched the configuration.
+
+---
+
+# Evidence and Preview Screenshots
+
+For a project submission or portfolio, capture the following screenshots from the actual terminal:
+
+1. **Project files:** Show `main.tf`, `variables.tf`, `locals.tf`, `terraform.tfvars`, and `outputs.tf`.
+2. **Terraform validation:** Show the successful `terraform validate` result.
+3. **Terraform plan:** Show `Plan: 3 to add, 0 to change, 0 to destroy`.
+4. **Terraform apply:** Show the three instance creation messages and successful apply summary.
+5. **Terraform output:** Show all three instance names.
+6. **Terraform state:** Show the three `aws_instance.kke_instance` resources.
+7. **Final plan:** Show `No changes. Your infrastructure matches the configuration.`
+
+Suggested evidence folder:
+
+```text
+evidence/
+├── 01-project-files.png
+├── 02-terraform-validation.png
+├── 03-terraform-plan.png
+├── 04-terraform-apply.png
+├── 05-terraform-output.png
+├── 06-terraform-state.png
+└── 07-final-terraform-plan.png
+```
+
+*Note: These are recommended screenshot filenames and capture instructions, not screenshots already captured.*
+
+# Skills Demonstrated
+
+- Infrastructure as Code (IaC)
+- Terraform configuration and deployment
+- AWS EC2 provisioning
+- Terraform `count` meta-argument
+- Terraform variables and local values
+- AWS AMI data source configuration
+- Terraform outputs
+- Infrastructure state management
+- Deployment planning and validation
+
+## Conclusion
+
+This project successfully demonstrates how Terraform can automate the provisioning and management of multiple AWS EC2 instances through reusable infrastructure configuration.
+
+By using `count`, variables, locals, data sources, and outputs, the deployment achieves a structured and maintainable configuration. The successful apply operation and final no-changes plan provide evidence that the three requested instances were provisioned and that the infrastructure is consistent with the declared Terraform configuration.
