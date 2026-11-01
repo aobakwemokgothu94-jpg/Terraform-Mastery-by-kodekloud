@@ -1,0 +1,260 @@
+# Terraform AWS EC2 Instance and Elastic IP Provisioning
+
+## Project Overview
+
+This project uses **Terraform** and the AWS provider to provision an EC2 instance and associate an Elastic IP address.
+
+The infrastructure was deployed in the `us-east-1` region using the existing AWS provider configuration connected to the lab environment.
+
+The task demonstrates Infrastructure as Code (IaC), AWS resource provisioning, resource association, Terraform outputs, and infrastructure state verification.
+
+## Objectives
+
+- Provision an EC2 instance named `xfusion-ec2`.
+- Use a Linux AMI.
+- Configure the instance type as `t2.micro`.
+- Allocate an Elastic IP named `xfusion-eip`.
+- Associate the Elastic IP with the EC2 instance.
+- Configure the required Terraform output variables.
+- Verify that the deployed infrastructure matches the Terraform configuration.
+
+## Technologies Used
+
+- Terraform
+- AWS Provider v5.91.0
+- Amazon EC2
+- AWS Elastic IP
+- Linux / Ubuntu AMI
+- LocalStack-compatible AWS lab environment
+
+## Project Structure
+
+```text
+/home/bob/terraform/
+├── main.tf
+├── outputs.tf
+├── provider.tf
+├── .terraform.lock.hcl
+└── README.MD
+```
+
+## Infrastructure Configuration
+
+### 1. EC2 Instance
+
+The EC2 resource is configured with:
+
+| Property | Configuration |
+|---|---|
+| Resource type | `aws_instance` |
+| Resource name | `xfusion_ec2` |
+| Instance name | `xfusion-ec2` |
+| AMI | `ami-0c55b159cbfafe1f0` |
+| Instance type | `t2.micro` |
+
+### 2. Elastic IP
+
+The Elastic IP resource is configured with:
+
+| Property | Configuration |
+|---|---|
+| Resource type | `aws_eip` |
+| Resource name | `xfusion_eip` |
+| Elastic IP name | `xfusion-eip` |
+| Domain | `vpc` |
+| Association | EC2 instance `xfusion_ec2` |
+
+## Configuration Previews
+
+### main.tf
+
+```hcl
+resource "aws_instance" "xfusion_ec2" {
+  ami           = "ami-0c55b159cbfafe1f0"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "xfusion-ec2"
+  }
+}
+
+resource "aws_eip" "xfusion_eip" {
+  domain   = "vpc"
+  instance = aws_instance.xfusion_ec2.id
+
+  tags = {
+    Name = "xfusion-eip"
+  }
+}
+```
+
+### outputs.tf
+
+```hcl
+output "KKE_instance_name" {
+  value = aws_instance.xfusion_ec2.tags["Name"]
+}
+
+output "KKE_eip" {
+  value = aws_eip.xfusion_eip.public_ip
+}
+```
+
+### provider.tf
+
+The existing provider configuration uses:
+
+- AWS provider version `5.91.0`
+- Region `us-east-1`
+- Lab endpoint `http://aws:4566`
+- Skip credentials validation
+- Skip account ID validation
+- S3 path-style addressing
+
+The existing provider configuration was preserved.
+
+## Deployment Procedure
+
+### Step 1: Navigate to the project directory
+
+```bash
+cd /home/bob/terraform
+```
+
+### Step 2: Format Terraform configuration
+
+```bash
+terraform fmt
+```
+
+### Step 3: Initialize Terraform
+
+```bash
+terraform init
+```
+
+**Result:**
+
+```text
+Initializing the backend...
+Initializing provider plugins...
+
+- Finding hashicorp/aws versions matching "5.91.0"...
+- Installing hashicorp/aws v5.91.0...
+- Installed hashicorp/aws v5.91.0
+
+Terraform has been successfully initialized!
+```
+
+### Step 4: Review the deployment plan
+
+```bash
+terraform plan
+```
+
+**Initial plan result:**
+
+```text
+Plan: 2 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + KKE_eip           = (known after apply)
+  + KKE_instance_name = "xfusion-ec2"
+```
+
+### Step 5: Deploy the infrastructure
+
+```bash
+terraform apply -auto-approve
+```
+
+**Deployment result:**
+
+```text
+aws_instance.xfusion_ec2: Creation complete
+aws_eip.xfusion_eip: Creation complete
+
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+```
+
+## Deployment Preview and Outputs
+
+### Terraform Output
+
+Command:
+
+```bash
+terraform output
+```
+
+Verified output:
+
+```text
+KKE_eip = "127.212.85.107"
+KKE_instance_name = "xfusion-ec2"
+```
+
+### Provisioned Resources
+
+| Resource | Verified value |
+|---|---|
+| EC2 instance | `xfusion-ec2` |
+| Instance ID | `i-b651c66f8d109017f` |
+| Instance type | `t2.micro` |
+| Elastic IP | `127.212.85.107` |
+| Allocation ID | `eipalloc-44c50acd7cb07716a` |
+| Elastic IP association | Associated with EC2 instance |
+
+## Final Infrastructure Verification
+
+After deployment, Terraform was used to refresh the infrastructure state and compare the deployed resources against the configuration.
+
+Command:
+
+```bash
+terraform plan
+```
+
+**Final verified output:**
+
+```text
+aws_instance.xfusion_ec2: Refreshing state...
+aws_eip.xfusion_eip: Refreshing state...
+
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against
+your configuration and found no differences, so no
+changes are needed.
+```
+
+## Final Results
+
+| Task requirement | Status |
+|---|---|
+| EC2 instance provisioned | PASS |
+| Linux AMI configured | PASS |
+| Instance type set to `t2.micro` | PASS |
+| EC2 instance tagged `xfusion-ec2` | PASS |
+| Elastic IP provisioned | PASS |
+| Elastic IP tagged `xfusion-eip` | PASS |
+| Elastic IP associated with EC2 | PASS |
+| `KKE_instance_name` output configured | PASS |
+| `KKE_eip` output configured | PASS |
+| Final Terraform plan verified | PASS |
+
+## Conclusion
+
+The Terraform EC2 and Elastic IP provisioning task was successfully completed.
+
+The EC2 instance `xfusion-ec2` was provisioned using the configured Linux AMI and `t2.micro` instance type. An Elastic IP address was allocated, tagged `xfusion-eip`, and associated with the instance.
+
+Both required Terraform outputs were successfully generated and verified.
+
+The final `terraform plan` confirmed:
+
+**No changes. Your infrastructure matches the configuration.**
+
+This confirms that the deployed infrastructure is consistent with the Terraform configuration.
+
+**Project Status: COMPLETED AND VERIFIED**
