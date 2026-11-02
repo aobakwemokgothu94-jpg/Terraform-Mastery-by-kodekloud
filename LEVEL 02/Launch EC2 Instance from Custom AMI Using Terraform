@@ -1,0 +1,75 @@
+# Terraform AWS AMI Backup and Instance Provisioning
+
+This repository contains Terraform configurations for creating an Amazon Machine Image (AMI) backup from an existing EC2 instance and provisioning a new EC2 instance using that AMI on AWS.
+
+## Architecture & Resources
+
+1. **Existing EC2 Instance (`aws_instance.ec2`)**: Represents the baseline EC2 instance (`devops-ec2`) acting as the source for the AMI backup.
+2. **AMI from Instance (`aws_ami_from_instance.devops_ami`)**: Creates a custom AMI (`devops-ec2-ami`) directly from the running source instance.
+3. **New EC2 Instance (`aws_instance.new`)**: Provisions a new EC2 instance (`devops-ec2-new`) using the newly generated custom AMI ID, inheriting necessary networking and instance specifications.
+
+---
+
+## Configuration Files
+
+* **`main.tf`**: Defines the existing EC2 resource, the custom AMI resource, and the new EC2 instance resource.
+* **`outputs.tf`**: Exposes the required outputs for validation:
+  * `KKE_ami_id`: The ID of the newly created AMI.
+  * `KKE_new_instance_id`: The ID of the newly provisioned EC2 instance.
+* **`provider.tf`**: Configures the AWS provider and required region settings.
+
+---
+
+## Usage / Execution
+
+1. Initialize the Terraform working directory:
+   ```bash
+   terraform init
+Validate the configuration:
+
+Bash
+terraform validate
+Preview the execution plan:
+
+Bash
+terraform plan
+Apply the configuration to provision the infrastructure:
+
+Bash
+terraform apply -auto-approve
+Verify outputs:
+
+Bash
+terraform output
+
+---
+
+### Previews & Verification Commands
+
+To capture previews or verify that your infrastructure matches the expected state, you can run the following diagnostic commands in your terminal (`/home/bob/terraform`):
+
+#### 1. Plan Verification
+Ensure `terraform plan` reports clean execution with no drift:
+```bash
+terraform plan
+Expected Output:
+No changes. Your infrastructure matches the configuration.
+
+2. AWS CLI Verification Previews
+Verify AMI Status:
+
+Bash
+aws ec2 describe-images \
+  --region us-east-1 \
+  --owners self \
+  --filters "Name=name,Values=devops-ec2-ami" \
+  --query 'Images[].{Name:Name,ImageId:ImageId,State:State}' \
+  --output table
+Verify New Instance Status:
+
+Bash
+aws ec2 describe-instances \
+  --region us-east-1 \
+  --filters "Name=tag:Name,Values=devops-ec2-new" \
+  --query 'Reservations[].Instances[].{Name:Tags[?Key==`Name`].Value|[0],InstanceId:InstanceId,ImageId:ImageId,State:State.Name}' \
+  --output table
