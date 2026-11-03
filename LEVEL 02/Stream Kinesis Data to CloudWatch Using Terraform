@@ -1,0 +1,45 @@
+# AWS Kinesis Stream & CloudWatch Monitoring with Terraform
+
+This project provisions an Amazon Kinesis Data Stream with shard-level metrics enabled, along with a CloudWatch alarm to monitor `WriteProvisionedThroughputExceeded` events.
+
+---
+
+## Infrastructure Resources
+
+1. **Kinesis Data Stream (`datacenter-kinesis-stream`)**:
+   - Provisioned with a shard count of `1`.
+   - Shard-level metrics enabled (`IncomingBytes`, `OutgoingBytes`, `WriteProvisionedThroughputExceeded`, `ReadProvisionedThroughputExceeded`, `IncomingRecords`, `OutgoingRecords`, `IteratorAgeMilliseconds`) to track ingestion and throughput errors.
+
+2. **CloudWatch Alarm (`datacenter-kinesis-alarm`)**:
+   - Monitors the `WriteProvisionedThroughputExceeded` metric from the Kinesis stream.
+   - Triggers if the metric exceeds a threshold of `1` over a 5-minute period.
+
+---
+
+## File Structure
+
+* `main.tf`: Provisions the Kinesis stream, enables shard-level monitoring, and sets up the CloudWatch alarm.
+* `outputs.tf`: Exports the required variable outputs (`kke_kinesis_stream_name` and `kke_kinesis_alarm_name`).
+* `provider.tf`: Contains the AWS provider configuration.
+
+---
+
+## Usage Instructions
+
+1. Open your terminal in the Terraform working directory:
+   ```bash
+   cd /home/bob/terraform
+Initialize Terraform (if not already done):
+
+Bash
+terraform init
+Review the execution plan:
+
+Bash
+terraform plan
+(Ensure terraform plan returns No changes and your infrastructure matches the configuration before submitting).
+
+Apply the configuration:
+
+Bash
+terraform apply -auto-approve
