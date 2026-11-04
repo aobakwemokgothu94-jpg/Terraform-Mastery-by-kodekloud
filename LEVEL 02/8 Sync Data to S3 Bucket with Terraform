@@ -1,0 +1,67 @@
+# AWS S3 Bucket Data Migration & Sync with Terraform
+
+## Project Overview
+This repository contains a production-grade Infrastructure as Code (IaC) solution built using **Terraform** to automate cloud infrastructure provisioning and secure object data migration between AWS S3 buckets. Designed as part of an enterprise data migration pipeline, this implementation ensures idempotent resource deployment, strict access control governance, and complete data consistency.
+
+---
+
+## Architecture & Technical Stack
+
+* **Infrastructure as Code:** Terraform (`v1.x`)
+* **Cloud Provider:** Amazon Web Services (AWS)
+* **Core Services:** Amazon S3, AWS IAM, S3 Ownership Controls, S3 ACLs
+* **Automation & Provisioning:** `null_resource` with `local-exec` provisioner leveraging the **AWS CLI** (`aws s3 sync`)
+
+---
+
+## Repository Structure
+
+```text
+├── main.tf          # Core infrastructure resources (S3 Bucket, ACLs, and Data Sync Provisioner)
+├── variables.tf     # Input variable definitions (KKE_BUCKET)
+├── outputs.tf       # Exported resource outputs (Bucket Name & ACL status)
+├── provider.tf      # AWS provider and region configurations
+├── README.md        # Project documentation
+└── .terraform/      # Local provider plugins and dependency lock files
+Detailed Component Configuration
+1. Variables (variables.tf)
+Defines configurable deployment parameters, allowing dynamic target bucket naming:
+
+Terraform
+variable "KKE_BUCKET" {
+  type        = string
+  description = "The name of the new S3 bucket destination"
+  default     = "devops-sync-374084099"
+}
+2. Infrastructure & Data Migration (main.tf)
+Bucket Provisioning: Dynamically provisions the destination S3 bucket using the KKE_BUCKET variable.
+
+Security & Access Control: Enforces BucketOwnerPreferred ownership controls and configures a private canned ACL.
+
+Automated Data Sync: Triggers an idempotent aws s3 sync operation via a null_resource execution block to copy all objects seamlessly from the source bucket (devops-s3-374084099) to the target destination.
+
+3. Outputs (outputs.tf)
+Exposes critical deployment metadata for post-apply validation:
+
+new_kke_bucket_name: Returns the unique name of the created S3 bucket.
+
+new_kke_bucket_acl: Returns the active access control list configuration (private).
+
+Deployment & Verification Guide
+Initialize Terraform:
+
+Bash
+terraform init -upgrade
+Apply Infrastructure Configuration:
+
+Bash
+terraform apply --auto-approve
+Verify State & Infrastructure Consistency:
+Ensure zero configuration drift by running:
+
+Bash
+terraform plan
+Expected Output:
+
+Plaintext
+No changes. Your infrastructure matches the configuration.
