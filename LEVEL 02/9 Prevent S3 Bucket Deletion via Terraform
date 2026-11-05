@@ -1,0 +1,80 @@
+# Terraform S3 Bucket with Lifecycle Protection (`prevent_destroy`)
+
+This repository contains an Infrastructure as Code (IaC) solution using Terraform to provision an AWS S3 bucket equipped with strict lifecycle protections. The configuration ensures compliance with enterprise safety standards by guarding critical storage resources against accidental deletion.
+
+---
+
+## 🏗️ Architecture & Features
+
+* **Dynamic Resource Naming**: Implements configurable variables to define the S3 bucket name dynamically via `terraform.tfvars`.
+* **Deletion Safeguard**: Enforces the `prevent_destroy = true` lifecycle rule to prevent inadvertent termination of stateful storage.
+* **Modular Design**: Separates declarations into dedicated configuration files (`main.tf`, `variables.tf`, `outputs.tf`, `terraform.tfvars`).
+
+---
+
+## 📁 Project Structure
+
+```text
+.
+├── main.tf             # Core AWS S3 resource and lifecycle configurations
+├── variables.tf        # Input variable declarations (KKE_BUCKET_NAME)
+├── terraform.tfvars    # Environment-specific variable values
+├── outputs.tf          # Exported resource identifiers (s3_bucket_name)
+└── README.md           # Project documentation
+⚙️ Configuration File Overviews
+1. main.tf
+Terraform
+resource "aws_s3_bucket" "bucket" {
+  bucket = var.KKE_BUCKET_NAME
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+2. variables.tf
+Terraform
+variable "KKE_BUCKET_NAME" {
+  type        = string
+  description = "The name of the S3 bucket"
+}
+3. terraform.tfvars
+Terraform
+KKE_BUCKET_NAME = "xfusion-s3-517317625"
+4. outputs.tf
+Terraform
+output "s3_bucket_name" {
+  value       = aws_s3_bucket.bucket.id
+  description = "The name of the created S3 bucket"
+}
+🚀 Usage Guide
+Initialize the Terraform working directory:
+
+Bash
+terraform init
+Apply the infrastructure configuration:
+
+Bash
+terraform apply --auto-approve
+Verify infrastructure alignment:
+
+Bash
+terraform plan
+Expected output:
+
+Plaintext
+No changes. Your infrastructure matches the configuration.
+EOF
+
+
+---
+
+### Preview of Execution Output
+When running `terraform plan` after successful deployment, the workspace confirms state accuracy:
+
+```text
+aws_s3_bucket.bucket: Refreshing state... [id=xfusion-s3-517317625]
+
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against your configuration and
+found no differences, so no changes are needed.
