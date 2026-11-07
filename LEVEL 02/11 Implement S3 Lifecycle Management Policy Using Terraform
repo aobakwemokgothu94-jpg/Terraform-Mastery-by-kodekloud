@@ -1,0 +1,55 @@
+# Terraform AWS S3 Lifecycle Management Lab
+
+This project provisions an AWS S3 bucket with versioning enabled and a specific lifecycle configuration policy applied via HashiCorp Terraform.
+
+## 📋 Task Objectives
+
+1. **S3 Bucket Creation**: Provision an S3 bucket named `xfusion-lifecycle-217566959`.
+2. **Versioning**: Enable bucket versioning to track and manage object states.
+3. **Lifecycle Policy**: Implement a lifecycle configuration (`xfusion-lifecycle-rule`) that:
+   - Transitions objects to **`STANDARD_IA`** (Infrequent Access) storage after **30 days**.
+   - Permanently deletes objects after **365 days**.
+4. **Outputs**: Expose the provisioned bucket name via the `KKE_bucket_name` output variable.
+
+---
+
+## 🛠️ Configuration Architecture
+
+### `main.tf`
+Contains the core resource declarations:
+* **`aws_s3_bucket.lifecycle_bucket`**: Creates the target bucket.
+* **`aws_s3_bucket_versioning.versioning`**: Enables versioning on the bucket.
+* **`aws_s3_bucket_lifecycle_configuration.lifecycle_rule`**: Sets up the required transition and expiration rules.
+
+### `outputs.tf`
+Defines the required output block for validation:
+```hcl
+output "KKE_bucket_name" {
+  value = aws_s3_bucket.lifecycle_bucket.bucket
+}
+🚀 Usage Instructions
+Navigate to the Terraform working directory:
+
+Bash
+cd /home/bob/terraform
+Initialize Terraform (if not already done):
+
+Bash
+terraform init
+Review the execution plan:
+
+Bash
+terraform plan
+Apply the configuration:
+
+Bash
+terraform apply -auto-approve
+✅ Verification
+Before submitting, verify that the infrastructure state is clean and matches the configuration:
+
+Bash
+terraform plan
+Expected Output:
+
+Plaintext
+No changes. Your infrastructure matches the configuration.
