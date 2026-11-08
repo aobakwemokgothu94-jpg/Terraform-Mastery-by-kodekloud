@@ -1,0 +1,106 @@
+Terraform SNS and SQS Messaging Infrastructure
+Project Overview
+This task provisions a simple messaging integration using Terraform and the AWS provider. The infrastructure is deployed against the configured LocalStack-compatible AWS endpoints in the us-east-1 region.
+
+The configuration creates:
+- An Amazon SNS topic named nautilus-sns-topic.
+- An Amazon SQS queue named nautilus-sqs-queue.
+- An SQS queue policy that permits Amazon SNS to send messages to the queue, restricted to the configured SNS topic.
+- An SNS subscription that connects the topic to the SQS queue using the sqs protocol.
+Terraform also exposes the SNS topic ARN and SQS queue URL as output values.
+Project Structure
+/home/bob/terraform/
+├── main.tf
+├── outputs.tf
+├── provider.tf
+├── .terraform.lock.hcl
+└── README.MD
+main.tf contains all infrastructure resources for this task. outputs.tf defines the required outputs. provider.tf contains the AWS provider configuration and service endpoints.
+Infrastructure Configuration
+SNS topic
+Resource: aws_sns_topic.nautilus_sns_topic
+- Name: nautilus-sns-topic
+SQS queue
+Resource: aws_sqs_queue.nautilus_sqs_queue
+- Name: nautilus-sqs-queue
+SQS queue policy
+Resource: aws_sqs_queue_policy.nautilus_sqs_policy
+
+The queue policy grants the SNS service permission to perform sqs:SendMessage. Its aws:SourceArn condition restricts that permission to the SNS topic created by this configuration.
+SNS subscription
+Resource: aws_sns_topic_subscription.nautilus_sns_subscription
+- Protocol: sqs
+- Endpoint: the ARN of nautilus-sqs-queue
+- Raw message delivery: enabled
+The subscription depends on the queue policy so that the permission is configured before the subscription is created.
+Terraform Outputs
+The outputs.tf file defines:
+Output	Description
+kke_sns_topic_arn	ARN of the SNS topic
+kke_sqs_queue_url	URL of the SQS queue
+
+
+Deployment Procedure
+Run these commands from the Terraform project directory:
+cd /home/bob/terraform
+
+terraform init
+terraform fmt
+terraform validate
+terraform plan
+terraform apply -auto-approve
+After applying, verify the deployed configuration:
+terraform plan
+terraform output
+Execution Previews
+The following previews are taken from the successful terminal output for this task.
+Provider initialization
+Initializing the backend...
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "5.91.0"...
+- Installing hashicorp/aws v5.91.0...
+- Installed hashicorp/aws v5.91.0 (signed by HashiCorp)
+
+Terraform has been successfully initialized!
+Validation
+Success! The configuration is valid.
+Terraform plan before deployment
+Plan: 4 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + kke_sns_topic_arn = (known after apply)
+  + kke_sqs_queue_url = (known after apply)
+Apply result
+aws_sns_topic.nautilus_sns_topic: Creation complete
+aws_sqs_queue.nautilus_sqs_queue: Creation complete
+aws_sqs_queue_policy.nautilus_sns_policy: Creation complete
+aws_sns_topic_subscription.nautilus_sns_subscription: Creation complete
+
+Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
+Output preview
+kke_sns_topic_arn = "arn:aws:sns:us-east-1:000000000000:nautilus-sns-topic"
+
+kke_sqs_queue_url = "http://sqs.us-east-1.localhost.localstack.cloud:4566/000000000000/nautilus-sqs-queue"
+Final Terraform plan
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure
+against your configuration and found no
+differences, so no changes are needed.
+Verification Summary
+Check	Result
+Terraform provider initialized	Successful
+Terraform formatting	Executed
+Terraform validation	Successful
+SNS topic created	Successful
+SQS queue created	Successful
+SQS queue policy created	Successful
+SNS-to-SQS subscription created	Successful
+Required Terraform outputs displayed	Successful
+Final plan reports no changes	Successful
+
+
+Final Result
+The Terraform deployment completed successfully. Four resources were added, with no changes or destructions. The final terraform plan confirmed that the deployed infrastructure matched the Terraform configuration.
+
+Task status: Completed and verified
