@@ -1,0 +1,96 @@
+Nautilus DevOps - AWS IAM Access Control (Terraform)
+📌 Project Overview
+This project provisions AWS Identity and Access Management (IAM) resources using Terraform for internal resource access control. It creates an IAM Role and an IAM Policy that allows listing EC2 instances, attaches the policy to the role, and exposes the resource names as outputs.
+
+📂 Configuration Files Summary
+1. variables.tf
+Defines the required variables for the role and policy names.
+
+Terraform
+variable "KKE_ROLE_NAME" {
+  type        = string
+  description = "Name of the IAM role"
+}
+
+variable "KKE_POLICY_NAME" {
+  type        = string
+  description = "Name of the IAM policy"
+}
+2. terraform.tfvars
+Provides the input values for the variables.
+
+Terraform
+KKE_ROLE_NAME   = "nautilus-role"
+KKE_POLICY_NAME = "nautilus-policy"
+3. main.tf
+Provisions the IAM Role, IAM Policy (ec2:Describe*), and the role-policy attachment.
+
+Terraform
+resource "aws_iam_role" "role" {
+  name = var.KKE_ROLE_NAME
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_policy" "policy" {
+  name        = var.KKE_POLICY_NAME
+  description = "Policy to allow listing EC2 instances"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = [
+          "ec2:Describe*"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "attachment" {
+  role       = aws_iam_role.role.name
+  policy_arn = aws_iam_policy.policy.arn
+}
+4. outputs.tf
+Outputs the created role and policy names.
+
+Terraform
+output "kke_iam_role_name" {
+  value = aws_iam_role.role.name
+}
+
+output "kke_iam_policy_name" {
+  value = aws_iam_policy.policy.name
+}
+🚀 Execution & Verification Steps
+Navigate to the working directory:
+
+Bash
+cd /home/bob/terraform
+Initialize Terraform:
+
+Bash
+terraform init
+Apply the configuration:
+
+Bash
+terraform apply -auto-approve
+Verify that the infrastructure matches the configuration:
+
+Bash
+terraform plan
+(Ensure it returns: No changes. Your infrastructure matches the configuration.)
