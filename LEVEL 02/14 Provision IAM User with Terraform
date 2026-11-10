@@ -1,0 +1,58 @@
+# Terraform IAM User & Provisioner Task
+
+This project provisions an AWS IAM user using Terraform, utilizes input variables and output values, and demonstrates the use of a `local-exec` provisioner to log a success message upon resource creation.
+
+## Project Structure
+
+* `main.tf`: Defines the AWS IAM user resource and the `local-exec` provisioner.
+* `variables.tf`: Declares the input variables used in the configuration.
+* `terraform.tfvars`: Assigns values to the defined input variables.
+* `outputs.tf`: Defines the output values returned after application.
+* `provider.tf`: Configures the required Terraform providers (AWS).
+
+## Usage
+
+1. Initialize the Terraform working directory:
+   ```bash
+   terraform init
+Review the execution plan:
+
+Bash
+terraform plan
+Apply the configuration:
+
+Bash
+terraform apply --auto-approve
+Verify that the confirmation log file has been created at /home/bob/terraform/KKE_user_created.log.
+
+
+---
+
+### 👁️ File Previews
+
+Here is a quick reference of the exact file contents currently in your `/home/bob/terraform` directory:
+
+#### `main.tf`
+```hcl
+resource "aws_iam_user" "john" {
+  name = var.KKE_USER_NAME
+
+  provisioner "local-exec" {
+    command = "echo 'KKE ${var.KKE_USER_NAME} has been created successfully!' >> /home/bob/terraform/KKE_user_created.log"
+  }
+}
+variables.tf
+Terraform
+variable "KKE_USER_NAME" {
+  type        = string
+  description = "Name of the AWS IAM user"
+}
+terraform.tfvars
+Terraform
+KKE_USER_NAME = "iamuser_john"
+outputs.tf
+Terraform
+output "kke_iam_user_name" {
+  value       = aws_iam_user.john.name
+  description = "The name of the provisioned IAM user"
+}
