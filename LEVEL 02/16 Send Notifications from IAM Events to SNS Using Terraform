@@ -1,0 +1,132 @@
+# AWS SNS & IAM Role Provisioning with Terraform
+
+This repository automates the provisioning of an AWS Simple Notification Service (SNS) topic, an IAM role with an EC2 trusted entity (assume-role policy), and an IAM policy granting publishing permissions, alongside local variables and outputs.
+
+---
+
+## Architecture Overview
+
+The configuration provisions the following AWS resources:
+1. **SNS Topic (`aws_sns_topic`)**: 
+   - **Name**: `devops-sns-topic`
+2. **IAM Role (`aws_iam_role`)**: 
+   - **Name**: `devops-sns-role`
+   - **Trusted Entity**: `ec2.amazonaws.com`
+3. **IAM Policy (`aws_iam_policy`)**: 
+   - **Name**: `devops-sns-policy`
+   - **Permissions**: Grants `sns:Publish` access to the `devops-sns-topic` ARN.
+4. **Policy Attachment (`aws_iam_role_policy_attachment`)**: 
+   - Attaches `devops-sns-policy` to `devops-sns-role`.
+
+---
+
+## Repository Structure
+
+```text
+/home/bob/terraform/
+├── .terraform/               # Provisioner plugins and modules
+├── .terraform.lock.hcl       # Provider version lock file
+├── provider.tf               # AWS provider configuration
+├── main.tf                   # Main infrastructure definition
+├── locals.tf                 # Local variable definitions
+├── outputs.tf                # Output variable definitions
+├── terraform.tfstate         # Local state file
+└── README.md                 # Project documentation
+Full Configuration Files
+main.tf
+Terraform
+# 1. Create SNS Topic
+resource "aws_sns_topic" "devops_sns" {
+  name = "devops-sns-topic"
+}
+
+# 2. Create IAM Role with EC2 as the trusted entity
+data "aws_iam_policy_document" "ec2_assume_role" {
+  statement {
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "devops_role" {
+  name               = "devops-sns-role"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+}
+
+# 3. Create IAM Policy that grants permission to publish messages to the SNS topic
+data "aws_iam_policy_document" "sns_publish" {
+  statement {
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.devops_sns.arn]
+  }
+}
+
+resource "aws_iam_policy" "devops_policy" {
+  name   = "devops-sns-policy"
+  policy = data.aws_iam_policy_document.sns_publish.json
+}
+
+# Attach Policy to Role
+resource "aws_iam_role_policy_attachment" "attach" {
+  role       = aws_iam_role.devops_role.name
+  policy_arn = aws_iam_policy.devops_policy.arn
+}
+locals.tf
+Terraform
+locals {
+  KKE_SNS_TOPIC_NAME = aws_sns_topic.devops_sns.name
+  KKE_ROLE_NAME      = aws_iam_role.devops_role.name
+  KKE_POLICY_NAME    = aws_iam_policy.devops_policy.name
+}
+outputs.tf
+Terraform
+output "kke_sns_topic_name" {
+  value = local.KKE_SNS_TOPIC_NAME
+}
+
+output "kke_role_name" {
+  value = local.KKE_ROLE_NAME
+}
+
+output "kke_policy_name" {
+  value = local.KKE_POLICY_NAME
+}
+Execution & Verification Preview
+Plaintext
+bob@iac-server ~/terraform via 💠 default ➜ terraform init
+Initializing the backend...
+Initializing provider plugins...
+- Finding hashicorp/aws versions matching "5.91.0"...
+- Installing hashicorp/aws v5.91.0...
+- Installed hashicorp/aws v5.91.0 (signed by HashiCorp)
+
+Terraform has been successfully initialized!
+
+bob@iac-server ~/terraform via 💠 default ➜ terraform apply -auto-approve
+Terraform used the selected providers to generate the following execution plan.
+Plan: 4 to add, 0 to change, 0 to destroy.
+
+aws_iam_role.devops_role: Creating...
+aws_sns_topic.devops_sns: Creating...
+aws_iam_role.devops_role: Creation complete after 0s [id=devops-sns-role]
+aws_sns_topic.devops_sns: Creation complete after 0s [id=arn:aws:sns:us-east-1:000000000000:devops-sns-topic]
+aws_iam_policy.devops_policy: Creating...
+aws_iam_policy.devops_policy: Creation complete after 0s [id=arn:aws:iam::000000000000:policy/devops-sns-policy]
+aws_iam_role_policy_attachment.attach: Creating...
+aws_iam_role_policy_attachment.attach: Creation complete after 0s [id=devops-sns-role-20261112044524476200000001]
+
+Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+kke_policy_name = "devops-sns-policy"
+kke_role_name = "devops-sns-role"
+kke_sns_topic_name = "devops-sns-topic"
+
+bob@iac-server ~/terraform via 💠 default ➜ terraform plan
+No changes. Your infrastructure matches the configuration.
+Terraform has compared your real infrastructure against your configuration and found no differences, so no changes are needed.
