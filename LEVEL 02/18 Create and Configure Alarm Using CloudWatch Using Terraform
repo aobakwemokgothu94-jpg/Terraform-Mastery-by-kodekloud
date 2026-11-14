@@ -1,7 +1,7 @@
 # Terraform AWS EC2 and CloudWatch Alarm Configuration
 
 ## Overview
-This project sets up an AWS EC2 instance, configures a CloudWatch metric alarm to monitor CPU utilization, and links it to an existing Simple Notification Service (SNS) topic using HashiCorp Terraform.
+This project provisions an AWS EC2 instance (`xfusion-ec2`) and configures an associated CloudWatch metric alarm (`xfusion-alarm`) to monitor CPU utilization. It links the alarm actions to the existing `xfusion-sns-topic` SNS topic using HashiCorp Terraform.
 
 ---
 
@@ -10,48 +10,45 @@ This project sets up an AWS EC2 instance, configures a CloudWatch metric alarm t
 1. **AWS EC2 Instance (`aws_instance.xfusion_ec2`)**
    - **AMI:** `ami-0c02fb55956c7d316` (Ubuntu)
    - **Instance Type:** `t2.micro`
-   - **Tag Name:** `xfusion-ec2`
+   - **Name Tag:** `xfusion-ec2`
 
 2. **AWS SNS Topic (`aws_sns_topic.sns_topic`)**
-   - **Name:** `xfusion-sns-topic` (Pre-existing/referenced topic)
+   - **Topic Name:** `xfusion-sns-topic` (Referenced/Managed for notification routing)
 
 3. **CloudWatch Metric Alarm (`aws_cloudwatch_metric_alarm.xfusion_alarm`)**
    - **Alarm Name:** `xfusion-alarm`
-   - **Metric:** `CPUUtilization`
+   - **Metric Name:** `CPUUtilization`
    - **Namespace:** `AWS/EC2`
    - **Statistic:** `Average`
    - **Threshold:** Greater than or equal to `90%`
    - **Period:** `300` seconds (5 minutes)
    - **Evaluation Periods:** `1`
-   - **Alarm Actions:** Sends notifications to `xfusion-sns-topic`
+   - **Alarm Actions:** `xfusion-sns-topic` ARN
 
 4. **Outputs (`outputs.tf`)**
-   - `KKE_instance_name`: Returns the name of the provisioned EC2 instance.
-   - `KKE_alarm_name`: Returns the name of the configured CloudWatch alarm.
+   - `KKE_instance_name`: Outputs the instance name (`xfusion-ec2`).
+   - `KKE_alarm_name`: Outputs the CloudWatch alarm name (`xfusion-alarm`).
 
 ---
 
 ## File Structure
 ```text
 /home/bob/terraform/
-├── main.tf             # Main infrastructure resources (EC2, SNS, CloudWatch Alarm)
-├── outputs.tf          # Output definitions for verification
-├── provider.tf         # AWS Provider configuration
+├── main.tf             # Infrastructure declarations (EC2, SNS, CloudWatch Alarm)
+├── outputs.tf          # Output variable definitions
+├── provider.tf         # AWS Provider setup
+├── .terraform/         # Local Terraform plugins and backend
 └── README.MD           # Project documentation
-Usage / Execution
-Initialize the Terraform working directory:
+Execution & Verification
+Initialize the Terraform environment:
 
 Bash
 terraform init
-Review the execution plan to verify that all resources will be created as expected:
-
-Bash
-terraform plan
-Apply the configuration to provision the infrastructure:
+Apply the configuration changes:
 
 Bash
 terraform apply --auto-approve
-Verify that your infrastructure matches the configuration (should return No changes. Your infrastructure matches the configuration.):
+Verify state alignment (must output No changes. Your infrastructure matches the configuration.):
 
 Bash
 terraform plan
@@ -59,5 +56,5 @@ terraform plan
 ---
 
 ### Task Preview Summary
-* **Status:** Complete & Verified (`No changes` confirmed via `terraform plan`)
-* **Next Step:** You are ready to click **Check** on your [Task Review](https://engineer.kodekloud.com/review) page to submit!
+* **Current Status:** Fully deployed, verified, and matched with zero infrastructure drift (`No changes. Your infrastructure matches the configuration.`).
+* **Next Step:** You are completely good to go! Head over to your [Task Review](https://engineer.kodekloud.com/review) page and click the **Check** button to successfully complete the lab.
