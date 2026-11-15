@@ -1,0 +1,58 @@
+# AWS Infrastructure Monitoring: CloudWatch Alarm & SNS Integration
+
+This repository contains [Terraform](https://www.terraform.io/) configurations to set up automated monitoring and alerting for [AWS](https://aws.amazon.com/) EC2 instances. It establishes an [Amazon SNS](https://aws.amazon.com/sns/) topic coupled with an [Amazon CloudWatch](https://aws.amazon.com/cloudwatch/) metric alarm to detect high CPU utilization.
+
+## Architecture Overview
+
++------------------------+              +---------------------------+
+|   EC2 Instance CPU     |  Triggers    |   Amazon CloudWatch Alarm |
+|     Utilization > 80%  | -----------> |   (nautilus-cpu-alarm)    |
++------------------------+              +-------------+-------------+
+|
+Notifies|
+v
++-------------+-------------+
+|     Amazon SNS Topic      |
+|    (nautilus-sns-topic)   |
++---------------------------+
+
+
+## Resources Provisioned
+
+1. **`aws_sns_topic.nautilus_sns_topic`**: 
+   - A standard SNS topic named `nautilus-sns-topic` designed to receive and distribute CloudWatch alarm alerts.
+2. **`aws_cloudwatch_metric_alarm.nautilus_cpu_alarm`**:
+   - **Metric Name**: `CPUUtilization`
+   - **Namespace**: `AWS/EC2`
+   - **Statistic**: `Average`
+   - **Period**: `300` seconds (5 minutes)
+   - **Evaluation Periods**: `1`
+   - **Threshold**: `80` (GreaterThanThreshold)
+   - **Actions Enabled**: `true`
+   - **Alarm Actions**: Linked to the ARN of `nautilus-sns-topic`.
+
+## Outputs
+
+The configuration exposes the following outputs for dependency mapping:
+* `KKE_sns_topic_name`: The name of the SNS topic (`nautilus-sns-topic`).
+* `KKE_cloudwatch_alarm_name`: The name of the CloudWatch alarm (`nautilus-cpu-alarm`).
+
+## Usage & Deployment
+
+Navigate to the Terraform working directory and execute the following commands:
+
+```bash
+# Initialize the Terraform workspace and providers
+terraform init
+
+# Review the execution plan
+terraform plan
+
+# Apply the infrastructure changes
+terraform apply
+Verification
+To verify that the real infrastructure matches the configuration without drift, run:
+
+Bash
+terraform plan
+(Expected output: No changes. Your infrastructure matches the configuration.)
