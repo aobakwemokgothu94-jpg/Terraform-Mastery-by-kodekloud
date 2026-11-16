@@ -1,0 +1,54 @@
+AWS CloudFormation Stack Provisioning with Terraform
+Overview
+This project automates infrastructure provisioning for the Nautilus DevOps team by deploying an AWS CloudFormation stack (devops-dynamodb-stack) containing a DynamoDB table (devops-cf-dynamodb-table) using Terraform (/home/bob/terraform).
+
+Project Architecture & Configuration Files
+1. Variables Definition (variables.tf)
+Defines the required variable for the DynamoDB table name.
+
+Terraform
+variable "KKE_DYNAMODB_TABLE_NAME" {
+  type        = string
+  description = "DynamoDB table name"
+  default     = "devops-cf-dynamodb-table"
+}
+2. Main Infrastructure Configuration (main.tf)
+Provisions the aws_cloudformation_stack resource using the pre-provided local template body (local.cf_template_body) and includes a lifecycle block to ignore changes to the parameters attribute.
+
+Terraform
+resource "aws_cloudformation_stack" "devops_stack" {
+  name          = "devops-dynamodb-stack"
+  template_body = local.cf_template_body
+
+  parameters = {
+    DynamoDBTableName = var.KKE_DYNAMODB_TABLE_NAME
+  }
+
+  lifecycle {
+    ignore_changes = [parameters]
+  }
+}
+3. Outputs Definition (outputs.tf)
+Outputs the deployed CloudFormation stack name.
+
+Terraform
+output "KKE_stack_name" {
+  value       = aws_cloudformation_stack.devops_stack.name
+  description = "CloudFormation stack name"
+}
+Execution & Verification Guide
+Initialize Terraform:
+
+Bash
+cd /home/bob/terraform
+terraform init
+Apply the Configuration:
+
+Bash
+terraform apply -auto-approve
+Verify Infrastructure State:
+Run terraform plan to verify that your real infrastructure matches the configuration and returns:
+
+Bash
+terraform plan
+# Output: No changes. Your infrastruc
