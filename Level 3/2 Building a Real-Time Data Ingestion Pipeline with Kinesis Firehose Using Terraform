@@ -1,0 +1,173 @@
+# AWS Kinesis Data Firehose to S3 Pipeline (Terraform)
+
+This Terraform configuration provisions a streaming data ingestion pipeline using **Amazon Kinesis Data Firehose** to deliver records into an **Amazon S3** bucket with automated newline record delimiting.
+
+## Overview
+
+- **S3 Bucket (`xfusion-stream-bucket-150002905`)**: Destination storage for incoming Firehose delivery batches.
+- **IAM Role (`firehose-sts-role`) & Policy**: Allows `firehose.amazonaws.com` to assume the role via STS (`sts:AssumeRole`) and write objects to the target S3 bucket.
+- **Kinesis Data Firehose (`xfusion-firehose-stream`)**:
+  - Uses `extended_s3` destination configuration.
+  - Buffers incoming data up to **5 MB** or **300 seconds**, whichever comes first.
+  - Appends a newline delimiter (`\n`) after each record using `AppendDelimiterToRecord`.
+  - Waits for IAM policy attachment via `depends_on`.
+
+---
+
+## File Previews
+
+### `variables.tf`
+```hcl
+variable "KKE_S3_BUCKET_NAME" {
+  description = "Name of the S3 bucket"
+  type        = string
+  default     = "xfusion-stream-bucket-150002905"
+}
+
+variable "KKE_FIREHOSE_STREAM_NAME" {
+  description = "Name of the Firehose delivery stream"
+  type        = string
+  default     = "xfusion-firehose-stream"
+}
+
+variable "KKE_FIREHOSE_ROLE_NAME" {
+  description = "Name of the Firehose IAM role"
+  type        = string
+  default     = "firehose-sts-role"
+}
+```
+
+### `main.tf`
+```hcl
+# 1. S3 Bucket
+resource "aws_s3_bucket" "firehose_bucket" {
+  bucket = var.KKE_S3_BUCKET_NAME
+}
+
+# 2. IAM Role for Firehose (STS AssumeRole)
+resource "aws_iam_role" "firehose_role" {
+  name = var.KKE_FIREHOSE_ROLE_NAME
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "firehose.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# IAM Policy allowing Firehose to put objects into S3
+resource "aws_iam_policy" "firehose_s3_policy" {
+  name        = "${var.KKE_FIREHOSE_ROLE_NAME}-s3-policy"
+  description = "Allow Kinesis Firehose to write to S3 bucket"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:AbortMultipartUpload",
+          "s3:GetBucketLocation",
+          "s3:GetObject",
+          "s3:ListBucket",
+          "s3:ListBucketMultipartUploads",
+          "s3:PutObject"
+        ]
+        Resource = [
+          aws_s3_bucket.firehose_bucket.arn,
+          "${aws_s3_bucket.firehose_bucket.arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+# Attach the policy to the IAM role
+resource "aws_iam_role_policy_attachment" "firehose_policy_attach" {
+  role       = aws_iam_role.firehose_role.name
+  policy_arn = aws_iam_policy.firehose_s3_policy.arn
+}
+
+# 3. Kinesis Firehose Delivery Stream
+resource "aws_kinesis_firehose_delivery_stream" "extended_s3_stream" {
+  name        = var.KKE_FIREHOSE_STREAM_NAME
+  destination = "extended_s3"
+
+  extended_s3_configuration {
+    role_arn           = aws_iam_role.firehose_role.arn
+    bucket_arn         = aws_s3_bucket.firehose_bucket.arn
+    buffering_size     = 5
+    buffering_interval = 300
+
+    processing_configuration {
+      enabled = true
+
+      processors {
+        type = "AppendDelimiterToRecord"
+
+        parameters {
+          parameter_name  = "Delimiter"
+          parameter_value = "\n"
+        }
+      }
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.firehose_policy_attach
+  ]
+}
+```
+
+### `outputs.tf`
+```hcl
+output "kke_firehose_stream_name" {
+  description = "Name of the Firehose stream created"
+  value       = aws_kinesis_firehose_delivery_stream.extended_s3_stream.name
+}
+
+output "kke_s3_bucket_name" {
+  description = "Name of the S3 bucket created"
+  value       = aws_s3_bucket.firehose_bucket.id
+}
+
+output "kke_firehose_role_arn" {
+  description = "ARN of the created Firehose role"
+  value       = aws_iam_role.firehose_role.arn
+}
+```
+
+---
+
+## Usage & Verification
+
+1. **Initialize and Deploy**:
+   ```bash
+   terraform init
+   terraform plan
+   terraform apply -auto-approve
+   ```
+
+2. **Send Test Records**:
+   ```bash
+   aws firehose put-record-batch \
+     --delivery-stream-name xfusion-firehose-stream \
+     --records '[{"Data":"{\"event\":\"login\",\"user\":\"alice\"}"},{"Data":"{\"event\":\"logout\",\"user\":\"bob\"}"}]'
+   ```
+
+3. **Verify S3 Delivery**:
+   ```bash
+   aws s3 ls s3://xfusion-stream-bucket-150002905 --recursive
+   ```
+
+4. **Confirm Clean State**:
+   ```bash
+   terraform plan
+   ```
