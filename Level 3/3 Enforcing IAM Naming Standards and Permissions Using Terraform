@@ -1,0 +1,99 @@
+# Terraform AWS IAM Standardized Naming & Governance
+
+## Overview
+This project implements standardized, lowercase, hyphenated naming conventions and automated governance tagging for AWS IAM resources using Terraform. Input parameters (`KKE_PROJECT`, `KKE_TEAM`, and `KKE_ENVIRONMENT`) are validated at runtime and sanitized inside a `locals` block before provisioning an IAM User and an EC2-assumable IAM Role.
+
+---
+
+## Architecture & Naming Logic
+
+terraform.tfvars                  variables.tf
+(KKE_PROJECT, KKE_TEAM,    ───▶   Input Validation
+KKE_ENVIRONMENT)                 (Non-empty & regex checks)
+│
+▼
+main.tf (locals)
+• lower() + replace(/[^a-z0-9-]/, "-")
+• name_prefix = "
+𝑝
+𝑟
+𝑜
+𝑗
+𝑒
+𝑐
+𝑡
+−
+project−{team}"
+• common_tags map
+│
+┌────────────────────┴────────────────────┐
+▼                                         ▼
+aws_iam_user.kke_user                     aws_iam_role.kke_role
+Name: devops-dev-team-user                Name: devops-dev-team-role
+Tags: Project, Team,                      Trust: ec2.amazonaws.com
+ManagedBy, Env                      Tags: common_tags + RoleType=EC2
+
+
+---
+
+## Project Structure
+
+```text
+terraform/
+├── main.tf            # Locals sanitization logic, IAM User, and IAM Role resources
+├── variables.tf       # Input variable definitions with custom validation rules
+├── terraform.tfvars   # Environment-specific variable assignments
+├── outputs.tf         # Exported resource names and applied IAM user tags
+└── provider.tf        # AWS provider configuration
+Implementation Details
+1. Input Variables & Validation (variables.tf)
+KKE_PROJECT: Enforces a non-empty string using length(trimspace(var.KKE_PROJECT)) > 0.
+
+KKE_TEAM: Enforces alphanumeric characters, dashes, or underscores via regex("^[a-zA-Z0-9_-]+$", var.KKE_TEAM).
+
+KKE_ENVIRONMENT: Specifies the target deployment environment (dev).
+
+2. Sanitization & Tagging (main.tf)
+Sanitization: Converts KKE_PROJECT and KKE_TEAM to lowercase and replaces any non-alphanumeric character (excluding -) with - using replace(lower(...), "/[^a-z0-9-]/", "-").
+
+Prefix Construction: Combines sanitized values into local.name_prefix (devops-dev-team).
+
+Governance Tags: Applies Project, Team, ManagedBy = "Terraform", and Env to both resources, merging RoleType = "EC2" onto aws_iam_role.kke_role.
+
+3. Outputs (outputs.tf)
+Output Name	Description	Resolved Value
+kke_user_name	Name of the created IAM user	devops-dev-team-user
+kke_role_name	Name of the created IAM role	devops-dev-team-role
+kke_tags_applied	Tags applied to the IAM user	{ Env = "dev", ManagedBy = "Terraform", Project = "devops", Team = "dev-team" }
+Deployment & Verification
+Bash
+# Initialize, validate, and apply configuration
+terraform init
+terraform validate
+terraform apply -auto-approve
+
+# Verify zero configuration drift
+terraform plan
+
+# Verify live AWS IAM resources and tags
+aws iam get-user --user-name devops-dev-team-user
+aws iam list-user-tags --user-name devops-dev-team-user
+aws iam get-role --role-name devops-dev-team-role
+aws iam list-role-tags --role-name devops-dev-team-role
+
+---
+
+### Portfolio & LinkedIn Preview
+
+**Project Title:** Enforcing AWS IAM Naming Standards & Governance Tags with Terraform
+
+**Summary:**
+Built a reusable Terraform configuration that validates team inputs, sanitizes resource identifiers via `locals` regex transformations, and provisions standardized AWS IAM users and EC2 service roles with consistent governance tags.
+
+**Key Highlights:**
+* **Input Guardrails:** Implemented custom `validation` blocks in `variables.tf` to reject empty project strings and enforce strict character patterns on team identifiers.
+* **Dynamic Sanitization:** Used `lower()` and `replace()` inside a `locals` block to guarantee lowercase, hyphen-delimited naming (`devops-dev-team-user` and `devops-dev-team-role`).
+* **Automated Tag Compliance:** Centralized `Project`, `Team`, `ManagedBy`, and `Env` tags in `local.common_tags` and extended role metadata via `merge()` for `RoleType = "EC2"`.
+* **CLI & State Verification:** Validated zero drift with `terraform plan` and confirmed live resource attributes and trust policies via AWS CLI (`iam get-user` / `iam get-role`).
+
+**Tags:** `#Terraform` `#AWS` `#IAM` `#InfrastructureAsCode` `#DevOps` `#CloudSecurity` `#Governance`
