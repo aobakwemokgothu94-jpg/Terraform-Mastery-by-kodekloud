@@ -1,0 +1,68 @@
+Nautilus DevOps — LocalStack Streaming & Storage InfrastructureTerraform configuration for provisioning streaming and storage resources on LocalStack for the Nautilus DevOps team.Resources & ConfigurationComponentName / ValueDetailsKinesis Streamdatacenter-dev-stream1 shard, 24-hour retention period, tagged Environment = dev & Purpose = Stream ingestionS3 Bucketdatacenter-dev-67458725Tagged Environment = dev & Owner = datacenterSTS Caller Identity000000000000Queried via aws_caller_identity and logged via null_resourceProject Structure (/home/bob/terraform)main.tf — Kinesis stream, S3 bucket, STS caller identity lookup, and local-exec log provisionersvariables.tf — Input variable definitions (KKE_ENVIRONMENT, KKE_KINESIS_STREAM_NAME, KKE_S3_BUCKET_NAME)terraform.tfvars — Variable values for the dev environmentoutputs.tf — Exports kke_caller_identity_account_id, kke_kinesis_stream_name, and kke_s3_bucket_namekinesis_creation.log — Records "Kinesis Stream datacenter-dev-stream created"s3_creation.log — Records "S3 Bucket datacenter-dev-67458725 created"account_identity.log — Records "Logged in as account ID:000000000000"UsageBashcd /home/bob/terraform
+terraform init
+terraform apply -auto-approve
+terraform plan
+Raw README.md (Copy & Paste)Markdown# Nautilus DevOps — LocalStack Streaming & Storage Infrastructure
+
+Terraform configuration for provisioning streaming and storage resources on LocalStack for the Nautilus DevOps team.
+
+## Resources & Configuration
+
+| Component | Name / Value | Details |
+| :--- | :--- | :--- |
+| **Kinesis Stream** | `datacenter-dev-stream` | 1 shard, 24-hour retention period, tagged `Environment = dev` & `Purpose = Stream ingestion` |
+| **S3 Bucket** | `datacenter-dev-67458725` | Tagged `Environment = dev` & `Owner = datacenter` |
+| **STS Caller Identity** | `000000000000` | Queried via `aws_caller_identity` and logged via `null_resource` |
+
+## Project Structure (`/home/bob/terraform`)
+
+* `main.tf` — Kinesis stream, S3 bucket, STS caller identity lookup, and `local-exec` log provisioners
+* `variables.tf` — Input variable definitions (`KKE_ENVIRONMENT`, `KKE_KINESIS_STREAM_NAME`, `KKE_S3_BUCKET_NAME`)
+* `terraform.tfvars` — Variable values for the `dev` environment
+* `outputs.tf` — Exports `kke_caller_identity_account_id`, `kke_kinesis_stream_name`, and `kke_s3_bucket_name`
+* `kinesis_creation.log` — Records `"Kinesis Stream datacenter-dev-stream created"`
+* `s3_creation.log` — Records `"S3 Bucket datacenter-dev-67458725 created"`
+* `account_identity.log` — Records `"Logged in as account ID:000000000000"`
+
+## Usage
+
+```bash
+cd /home/bob/terraform
+terraform init
+terraform apply -auto-approve
+terraform plan
+
+To write it directly from your terminal and open the markdown preview in VS Code:
+
+```bash
+cat << 'EOF' > /home/bob/terraform/README.md
+# Nautilus DevOps — LocalStack Streaming & Storage Infrastructure
+
+Terraform configuration for provisioning streaming and storage resources on LocalStack for the Nautilus DevOps team.
+
+## Resources & Configuration
+
+| Component | Name / Value | Details |
+| :--- | :--- | :--- |
+| **Kinesis Stream** | `datacenter-dev-stream` | 1 shard, 24-hour retention period, tagged `Environment = dev` & `Purpose = Stream ingestion` |
+| **S3 Bucket** | `datacenter-dev-67458725` | Tagged `Environment = dev` & `Owner = datacenter` |
+| **STS Caller Identity** | `000000000000` | Queried via `aws_caller_identity` and logged via `null_resource` |
+
+## Project Structure (`/home/bob/terraform`)
+
+* `main.tf` — Kinesis stream, S3 bucket, STS caller identity lookup, and `local-exec` log provisioners
+* `variables.tf` — Input variable definitions (`KKE_ENVIRONMENT`, `KKE_KINESIS_STREAM_NAME`, `KKE_S3_BUCKET_NAME`)
+* `terraform.tfvars` — Variable values for the `dev` environment
+* `outputs.tf` — Exports `kke_caller_identity_account_id`, `kke_kinesis_stream_name`, and `kke_s3_bucket_name`
+* `kinesis_creation.log` — Records `"Kinesis Stream datacenter-dev-stream created"`
+* `s3_creation.log` — Records `"S3 Bucket datacenter-dev-67458725 created"`
+* `account_identity.log` — Records `"Logged in as account ID:000000000000"`
+
+## Usage
+
+```bash
+cd /home/bob/terraform
+terraform init
+terraform apply -auto-approve
+terraform plan
+EOF
