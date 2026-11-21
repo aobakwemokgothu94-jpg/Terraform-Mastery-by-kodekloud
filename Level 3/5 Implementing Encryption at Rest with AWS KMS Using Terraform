@@ -1,0 +1,133 @@
+# AWS KMS Key Provisioning & File Encryption with Terraform
+
+## Task Overview
+
+Provision a symmetric [AWS KMS](https://docs.aws.amazon.com/kms/) key named `devops-kms-key` (with alias `alias/devops-kms-key`), encrypt `/home/bob/terraform/SensitiveData.txt` into base64-encoded ciphertext saved at `/home/bob/terraform/EncryptedData.bin`, decrypt it to verify content parity, and expose `kke_kms_key_name` in `outputs.tf` while maintaining zero state drift in [Terraform](https://developer.hashicorp.com/terraform/docs).
+
+## Architecture Flow
+
+```text
++-----------------------+       +----------------------------------+       +-------------------------+
+| SensitiveData.txt     | ----> | Terraform (aws_kms_key + alias)  | ----> | AWS KMS (devops-kms-key)|
+| (/home/bob/terraform) |       | main.tf & outputs.tf             |       | Key ID: b491807d-...    |
++-----------------------+       +----------------------------------+       +-------------------------+
+                                                  |                                      |
+                                                  | local-exec (AWS CLI)                 | Encrypt / Decrypt
+                                                  v                                      v
+                                +----------------------------------+       +-------------------------+
+                                | EncryptedData.bin (Base64)       | ----> | DecryptedData.txt       |
+                                | diff -s verified (0 changes)     |       | Matches original text   |
+                                +----------------------------------+       +-------------------------+
+Configuration Files
+main.tf
+Terraform
+resource "aws_kms_key" "devops_kms_key" {
+  description             = "Symmetric KMS key for Nautilus DevOps data security"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Name = "devops-kms-key"
+  }
+}
+
+resource "aws_kms_alias" "devops_kms_key_alias" {
+  name          = "alias/devops-kms-key"
+  target_key_id = aws_kms_key.devops_kms_key.key_id
+}
+
+resource "null_resource" "kms_encrypt_decrypt" {
+  triggers = {
+    key_id = aws_kms_key.devops_kms_key.key_id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      aws kms encrypt \
+        --key-id ${aws_kms_key.devops_kms_key.key_id} \
+        --plaintext fileb:///home/bob/terraform/SensitiveData.txt \
+        --output text \
+        --query CiphertextBlob > /home/bob/terraform/EncryptedData.bin
+
+      aws kms decrypt \
+        --ciphertext-blob fileb://<(base64 -d /home/bob/terraform/EncryptedData.bin) \
+        --output text \
+        --query Plaintext | base64 -d > /home/bob/terraform/DecryptedData.txt
+    EOT
+    interpreter = ["/bin/bash", "-c"]
+  }
+
+  depends_on = [aws_kms_alias.devops_kms_key_alias]
+}
+outputs.tf
+Terraform
+output "kke_kms_key_name" {
+  description = "Name of the KMS key created"
+  value       = replace(aws_kms_alias.devops_kms_key_alias.name, "alias/", "")
+}
+Terminal Execution Previews
+1. Inspect Working Directory & Source File
+Plaintext
+bob@iac-server ~/terraform via 💠 default ➜  cd /home/bob/terraform
+ls -la
+cat SensitiveData.txt
+total 28
+drwxr-xr-x 1 bob bob 4096 Nov 21 13:40 .
+drwxr-x--- 1 bob bob 4096 Nov 21 13:40 ..
+-rw-rw-r-- 1 bob bob  435 Jun 19  2025 README.MD
+-rw-r--r-- 1 bob bob   25 Nov 21 13:40 SensitiveData.txt
+-rw-rw-r-- 1 bob bob 1116 May 13  2025 provider.tf
+This is a sensitive file.
+2. Initialize, Validate, and Apply Configuration
+Plaintext
+bob@iac-server ~/terraform via 💠 default ➜  terraform init
+terraform fmt
+terraform validate
+terraform apply -auto-approve
+...
+Success! The configuration is valid.
+
+Plan: 3 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + kke_kms_key_name = "devops-kms-key"
+aws_kms_key.devops_kms_key: Creating...
+aws_kms_key.devops_kms_key: Creation complete after 8s [id=b491807d-d0df-4744-9a7a-0db6506545d3]
+aws_kms_alias.devops_kms_key_alias: Creating...
+aws_kms_alias.devops_kms_key_alias: Creation complete after 0s [id=alias/devops-kms-key]
+null_resource.kms_encrypt_decrypt: Creating...
+null_resource.kms_encrypt_decrypt: Creation complete after 1s [id=5616367123922377958]
+
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+kke_kms_key_name = "devops-kms-key"
+3. Verify Encrypted Output, Decryption Parity, and Plan Drift
+Plaintext
+bob@iac-server ~/terraform via 💠 default ➜  cat /home/bob/terraform/EncryptedData.bin && echo ""
+diff -s /home/bob/terraform/SensitiveData.txt /home/bob/terraform/DecryptedData.txt
+terraform plan
+YjQ5MTgwN2QtZDBkZi00NzQ0LTlhN2EtMGRiNjUwNjU0NWQzvkZeA6XFjbc+NmcYGXvJDbSBIQWtDlHWhHyKHvBYKuslyOEhpUDQVX6/wp/gQkj5ZSyua7556qpflnPfTnsDyA==
+
+Files /home/bob/terraform/SensitiveData.txt and /home/bob/terraform/DecryptedData.txt are identical
+
+No changes. Your infrastructure matches the configuration.
+
+Terraform has compared your real infrastructure against your
+configuration and found no differences, so no changes are
+needed.
+
+---
+
+### Terminal Previews Only (for quick pasting into notes or portfolio sections)
+
+```text
+# Ciphertext output (EncryptedData.bin)
+YjQ5MTgwN2QtZDBkZi00NzQ0LTlhN2EtMGRiNjUwNjU0NWQzvkZeA6XFjbc+NmcYGXvJDbSBIQWtDlHWhHyKHvBYKuslyOEhpUDQVX6/wp/gQkj5ZSyua7556qpflnPfTnsDyA==
+
+# Parity check
+Files /home/bob/terraform/SensitiveData.txt and /home/bob/terraform/DecryptedData.txt are identical
+
+# State verification
+No changes. Your infrastructure matches the configuration.
