@@ -1,0 +1,63 @@
+# Nautilus DevOps AWS Multi-Tier Infrastructure
+
+This Terraform configuration provisions foundational AWS messaging, storage, and configuration management resources for the Nautilus DevOps cloud-native application stack.
+
+## Architecture & Provisioned Resources
+
+* **Amazon DynamoDB (`aws_dynamodb_table.app_table`):** Provisions the `devops-app-table` using on-demand (`PAY_PER_REQUEST`) capacity and a string partition key (`id`).
+* **Amazon SNS (`aws_sns_topic.app_topic`):** Sets up the `devops-app-topic` for decoupled application messaging and notifications.
+* **AWS SSM Parameter Store (`aws_ssm_parameter.app_config`):** Securely stores sensitive application configuration under `/devops/app/config` using `SecureString` encryption.
+
+## Prerequisites
+
+* Terraform v1.x+
+* AWS Provider `~> 5.91.0`
+* Valid AWS credentials configured in the environment
+
+## File Structure
+
+```text
+/home/bob/terraform/
+├── main.tf           # Core AWS resource definitions (DynamoDB, SNS, SSM)
+├── variables.tf      # Input variable declarations
+├── terraform.tfvars  # Environment-specific variable values
+├── outputs.tf        # Exported resource names and ARNs
+└── provider.tf       # AWS provider configuration
+Input Variables
+Name	Description	Type	Value (dev)
+KKE_ENVIRONMENT	Target deployment environment	string	"dev"
+KKE_DYNAMODB_TABLE_NAME	Name of the DynamoDB table	string	"devops-app-table"
+KKE_SNS_TOPIC_NAME	Name of the SNS topic	string	"devops-app-topic"
+KKE_SSM_PARAM_NAME	Path/name of the SSM parameter	string	"/devops/app/config"
+Outputs
+Name	Description
+kke_dynamodb_table_name	Name of the provisioned DynamoDB table
+kke_sns_topic_arn	ARN of the created SNS topic
+kke_ssm_parameter_name	Name of the created SSM parameter
+Usage
+Bash
+# Initialize the working directory and download providers
+terraform init
+
+# Preview infrastructure changes
+terraform plan
+
+# Apply the configuration
+terraform apply -auto-approve
+
+---
+
+### 2. Deployment & Output Previews
+
+#### **Live State & Outputs Preview (`terraform output`)**
+```hcl
+kke_dynamodb_table_name = "devops-app-table"
+kke_sns_topic_arn       = "arn:aws:sns:us-east-1:000000000000:devops-app-topic"
+kke_ssm_parameter_name  = "/devops/app/config"
+Resource Dependency Graph Preview
+Plaintext
+terraform.tfvars ──► variables.tf
+                          │
+                          ├──► aws_dynamodb_table.app_table ──► kke_dynamodb_table_name
+                          ├──► aws_sns_topic.app_topic      ──► kke_sns_topic_arn
+                          └──► aws_ssm_parameter.app_config ──► kke_ssm_parameter_name
