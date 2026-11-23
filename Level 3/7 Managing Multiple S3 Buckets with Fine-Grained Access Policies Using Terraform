@@ -1,0 +1,186 @@
+# Nautilus DevOps — Multi-Environment AWS S3 Infrastructure
+
+This repository contains the Infrastructure as Code (IaC) configuration used by the Nautilus DevOps team to provision and manage three environment-specific AWS S3 buckets (`Dev`, `Staging`, and `Prod`) with lifecycle archiving, tag drift protection, and public-read object policies.
+
+---
+
+## Architecture & Resource Summary
+
+| Environment | Bucket Name | Owner | `Name` Tag | `Backup` Tag | Glacier Lifecycle (30 Days) | Public Read Policy |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Dev** | `datacenter-dev-bucket-585580237` | Alice | Yes | No | Disabled | Enabled (`s3:GetObject`) |
+| **Staging** | `datacenter-staging-bucket-585580237` | Bob | Yes | `true` | Enabled (`MoveToGlacier`) | Enabled (`s3:GetObject`) |
+| **Prod** | `datacenter-prod-bucket-585580237` | Carol | No | `true` | Enabled (`MoveToGlacier`) | Enabled (`s3:GetObject`) |
+
+---
+
+## Repository Structure
+
+```text
+/home/bob/terraform
+├── main.tf         # Core S3 bucket, lifecycle, public access block, and policy resources
+├── variables.tf    # Environment metadata map (KKE_ENV_TAGS)
+├── outputs.tf      # Exported bucket names (kke_bucket_names)
+├── provider.tf     # AWS provider configuration
+└── README.MD       # Project documentation
+```
+
+---
+
+## Implementation Details
+
+### 1. `variables.tf`
+Defines the `KKE_ENV_TAGS` map containing environment-specific metadata (bucket name, owner, backup flag, and conditional `Name` tag flag):
+
+```hcl
+variable "KKE_ENV_TAGS" {
+  description = "Map holding environment-specific metadata for S3 buckets"
+  type = map(object({
+    bucket_name      = string
+    owner            = string
+    backup           = bool
+    include_name_tag = bool
+  }))
+  default = {
+    Dev = {
+      bucket_name      = "datacenter-dev-bucket-585580237"
+      owner            = "Alice"
+      backup           = false
+      include_name_tag = true
+    }
+    Staging = {
+      bucket_name      = "datacenter-staging-bucket-585580237"
+      owner            = "Bob"
+      backup           = true
+      include_name_tag = true
+    }
+    Prod = {
+      bucket_name      = "datacenter-prod-bucket-585580237"
+      owner            = "Carol"
+      backup           = true
+      include_name_tag = false
+    }
+  }
+}
+```
+
+### 2. `main.tf`
+Provisions the S3 buckets using `for_each`, protects tags with `ignore_changes`, configures 30-day Glacier transitions (`MoveToGlacier`) for `Staging` and `Prod`, and attaches public-read bucket policies using `depends_on`:
+
+```hcl
+resource "aws_s3_bucket" "env_buckets" {
+  for_each = var.KKE_ENV_TAGS
+  bucket   = each.value.bucket_name
+
+  tags = merge(
+    {
+      Environment = each.key
+      Owner       = each.value.owner
+    },
+    each.value.include_name_tag ? { Name = each.value.bucket_name } : {},
+    each.value.backup ? { Backup = "true" } : {}
+  )
+
+  lifecycle {
+    ignore_changes = [tags]
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "glacier_lifecycle" {
+  for_each = {
+    for env, cfg in var.KKE_ENV_TAGS : env => cfg
+    if cfg.backup == true
+  }
+
+  bucket = aws_s3_bucket.env_buckets[each.key].id
+
+  rule {
+    id     = "MoveToGlacier"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
+    transition {
+      days          = 30
+      storage_class = "GLACIER"
+    }
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "public_access" {
+  for_each = aws_s3_bucket.env_buckets
+
+  bucket                  = each.value.id
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_policy" "public_read" {
+  for_each = aws_s3_bucket.env_buckets
+
+  bucket = each.value.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${each.value.arn}/*"
+      }
+    ]
+  })
+
+  depends_on = [
+    aws_s3_bucket.env_buckets,
+    aws_s3_bucket_public_access_block.public_access
+  ]
+}
+```
+
+### 3. `outputs.tf`
+Outputs the names of all provisioned S3 buckets:
+
+```hcl
+output "kke_bucket_names" {
+  description = "Names of the S3 buckets created"
+  value       = [for b in aws_s3_bucket.env_buckets : b.bucket]
+}
+```
+
+---
+
+## Deployment & Verification
+
+Execute the following workflow from `/home/bob/terraform`:
+
+```bash
+# 1. Initialize provider plugins
+terraform init
+
+# 2. Format and validate configuration
+terraform fmt
+terraform validate
+
+# 3. Provision infrastructure
+terraform apply -auto-approve
+
+# 4. Verify zero configuration drift
+terraform plan
+```
+
+### Expected Outputs
+
+```text
+kke_bucket_names = [
+  "datacenter-dev-bucket-585580237",
+  "datacenter-prod-bucket-585580237",
+  "datacenter-staging-bucket-585580237",
+]
+```
