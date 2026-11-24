@@ -1,0 +1,185 @@
+# AWS S3 Static Website Hosting with Modular Terraform (`s3-static-site`)
+
+## Overview
+Provisioned a public-facing static website on AWS S3 using a reusable Terraform module (`s3-static-site`) for the **Nautilus DevOps** team. The module encapsulates S3 bucket provisioning, public access block overrides, public-read bucket policies, static website hosting configuration, tagging (`Project = "StaticWeb"`), and automated `index.html` object deployment via `aws_s3_object` against a LocalStack AWS mock endpoint (`http://aws:4566`).
+
+---
+
+## Architecture & Module Structure
+
+```text
+/home/bob/terraform/
+├── main.tf                           # Root module invocation & website_url output
+├── provider.tf                       # AWS provider & LocalStack endpoint configuration
+├── index.html                        # Static portal entry page
+├── modules/
+│   └── s3-static-site/
+│       ├── main.tf                   # S3 bucket, public access, policy, website & object resources
+│       ├── variables.tf              # Parameterized bucket_name, index_document, tags & endpoint
+│       └── outputs.tf                # Exposes formatted S3 static website URL
+└── README.md
+Terraform Configuration & Module Scripts
+1. Root Configuration (main.tf)
+Terraform
+module "s3_static_site" {
+  source         = "./modules/s3-static-site"
+  bucket_name    = "devops-web-194265787"
+  index_document = "index.html"
+}
+
+output "website_url" {
+  value = module.s3_static_site.website_url
+}
+2. Provider Configuration (provider.tf)
+Terraform
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "5.91.0"
+    }
+  }
+}
+
+provider "aws" {
+  region                      = "us-east-1"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  s3_use_path_style           = true
+
+  endpoints {
+    s3 = "http://aws:4566"
+  }
+}
+3. Module Variables (modules/s3-static-site/variables.tf)
+Terraform
+variable "bucket_name" {
+  description = "Name of the S3 bucket for static website hosting"
+  type        = string
+}
+
+variable "index_document" {
+  description = "Index document for the S3 static website"
+  type        = string
+}
+
+variable "tags" {
+  description = "Tags to apply to the S3 bucket"
+  type        = map(string)
+  default = {
+    Project = "StaticWeb"
+  }
+}
+
+variable "s3_endpoint" {
+  description = "Mock S3 endpoint URL for LocalStack website URL output"
+  type        = string
+  default     = "http://aws:4566"
+}
+4. Module Resources (modules/s3-static-site/main.tf)
+Terraform
+resource "aws_s3_bucket" "site" {
+  bucket = var.bucket_name
+  tags   = var.tags
+}
+
+resource "aws_s3_bucket_public_access_block" "site" {
+  bucket = aws_s3_bucket.site.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_website_configuration" "site" {
+  bucket = aws_s3_bucket.site.id
+
+  index_document {
+    suffix = var.index_document
+  }
+}
+
+resource "aws_s3_bucket_policy" "public_read" {
+  bucket     = aws_s3_bucket.site.id
+  depends_on = [aws_s3_bucket_public_access_block.site]
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadGetObject"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "s3:GetObject"
+        Resource  = "${aws_s3_bucket.site.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_s3_object" "index" {
+  bucket       = aws_s3_bucket.site.id
+  key          = var.index_document
+  source       = "${path.root}/${var.index_document}"
+  content_type = "text/html"
+  etag         = filemd5("${path.root}/${var.index_document}")
+}
+5. Module Outputs (modules/s3-static-site/outputs.tf)
+Terraform
+output "website_url" {
+  description = "S3 static website URL"
+  value       = "${var.s3_endpoint}/${aws_s3_bucket.site.bucket}/${var.index_document}"
+}
+Execution & Verification Previews
+1. Terraform Initialization & Apply Preview
+Bash
+bob@iac-server ~/terraform via 💠 default ➜ terraform init && terraform apply -auto-approve
+Plaintext
+Initializing modules...
+- s3_static_site in modules/s3-static-site
+Initializing provider plugins...
+- Installed hashicorp/aws v5.91.0 (signed by HashiCorp)
+
+Terraform has been successfully initialized!
+
+Plan: 5 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + website_url = "http://aws:4566/devops-web-194265787/index.html"
+
+module.s3_static_site.aws_s3_bucket.site: Creation complete after 0s [id=devops-web-194265787]
+module.s3_static_site.aws_s3_bucket_public_access_block.site: Creation complete after 0s [id=devops-web-194265787]
+module.s3_static_site.aws_s3_bucket_website_configuration.site: Creation complete after 0s [id=devops-web-194265787]
+module.s3_static_site.aws_s3_object.index: Creation complete after 0s [id=index.html]
+module.s3_static_site.aws_s3_bucket_policy.public_read: Creation complete after 0s [id=devops-web-194265787]
+
+Apply complete! Resources: 5 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+website_url = "http://aws:4566/devops-web-194265787/index.html"
+2. HTTP Endpoint & Zero-Drift Verification Preview
+Bash
+bob@iac-server ~/terraform via 💠 default ➜ curl -s http://aws:4566/devops-web-194265787/index.html && terraform plan
+Plaintext
+Welcome to KKE labs!
+module.s3_static_site.aws_s3_bucket.site: Refreshing state... [id=devops-web-194265787]
+module.s3_static_site.aws_s3_bucket_public_access_block.site: Refreshing state... [id=devops-web-194265787]
+module.s3_static_site.aws_s3_bucket_website_configuration.site: Refreshing state... [id=devops-web-194265787]
+module.s3_static_site.aws_s3_object.index: Refreshing state... [id=index.html]
+module.s3_static_site.aws_s3_bucket_policy.public_read: Refreshing state... [id=devops-web-194265787]
+
+No changes. Your infrastructure matches the configuration.
+Verification Checklist
+[x] Created reusable module /home/bob/terraform/modules/s3-static-site/ with parameterized variables.tf, main.tf, and outputs.tf.
+
+[x] Provisioned S3 bucket devops-web-194265787 tagged with Project = "StaticWeb".
+
+[x] Enabled public access and attached s3:GetObject public-read bucket policy.
+
+[x] Configured static website hosting with index.html and uploaded index.html via aws_s3_object.
+
+[x] Exposed website_url output returning http://aws:4566/devops-web-194265787/index.html.
+
+[x] Verified terraform plan returns No changes. Your infrastructure matches the configuration.
