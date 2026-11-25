@@ -1,0 +1,198 @@
+# Multi-Environment AWS API Gateway & CloudWatch Log Groups with Terraform Workspaces
+
+## Overview
+Provisioned isolated `dev` and `prod` environments for multiple AWS API Gateway REST APIs and matching CloudWatch Log Groups using Terraform workspaces, the `count` meta-argument, and `local-exec` provisioners for resource creation auditing.
+
+## Architecture & Resource Mapping
+| Workspace | API Gateway REST API | CloudWatch Log Group | Audit Log Files |
+| :--- | :--- | :--- | :--- |
+| `dev` | `dev-datacenter-api-1` | `/aws/apigateway/dev-datacenter-api-1` | `apigateway.log`, `loggroups.log` |
+| `dev` | `dev-datacenter-api-2` | `/aws/apigateway/dev-datacenter-api-2` | `apigateway.log`, `loggroups.log` |
+| `prod` | `prod-datacenter-api-1` | `/aws/apigateway/prod-datacenter-api-1` | `apigateway.log`, `loggroups.log` |
+| `prod` | `prod-datacenter-api-2` | `/aws/apigateway/prod-datacenter-api-2` | `apigateway.log`, `loggroups.log` |
+
+## Key Implementation Details
+- **Terraform Workspaces (`dev` & `prod`):** Used `terraform.workspace` interpolation to prefix API Gateway and CloudWatch Log Group names dynamically while maintaining isolated state files under `terraform.tfstate.d/`.
+- **`count` Meta-Argument:** Iterated over `var.KKE_API_NAMES` (`["datacenter-api-1", "datacenter-api-2"]`) to provision matching API Gateways and CloudWatch Log Groups dynamically.
+- **`local-exec` Provisioners:** Logged creation confirmations to `/home/bob/terraform/apigateway.log` and `/home/bob/terraform/loggroups.log` upon resource creation.
+- **Workspace Outputs:** Exposed `kke_api_gateway_names` and `kke_log_group_names` via splat expressions (`[*]`) across both workspaces.
+
+## Terraform Configuration Files
+
+### `variables.tf`
+```hcl
+variable "KKE_API_NAMES" {
+  description = "Names of API Gateways to create"
+  type        = list(string)
+}
+```
+
+### `terraform.tfvars`
+```hcl
+KKE_API_NAMES = ["datacenter-api-1", "datacenter-api-2"]
+```
+
+### `main.tf`
+```hcl
+resource "aws_api_gateway_rest_api" "api" {
+  count = length(var.KKE_API_NAMES)
+  name  = "${terraform.workspace}-${var.KKE_API_NAMES[count.index]}"
+
+  provisioner "local-exec" {
+    command = "echo 'Created API Gateway ${self.name} in workspace${terraform.workspace}' >> /home/bob/terraform/apigateway.log"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "api_logs" {
+  count = length(var.KKE_API_NAMES)
+  name  = "/aws/apigateway/${terraform.workspace}-${var.KKE_API_NAMES[count.index]}"
+
+  provisioner "local-exec" {
+    command = "echo 'Created Log Group ${self.name} in workspace${terraform.workspace}' >> /home/bob/terraform/loggroups.log"
+  }
+}
+```
+
+### `outputs.tf`
+```hcl
+output "kke_api_gateway_names" {
+  value = aws_api_gateway_rest_api.api[*].name
+}
+
+output "kke_log_group_names" {
+  value = aws_cloudwatch_log_group.api_logs[*].name
+}
+```
+
+### `provider.tf`
+```hcl
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "5.91.0"
+    }
+  }
+}
+
+provider "aws" {
+  region                      = "us-east-1"
+  skip_credentials_validation = true
+  skip_requesting_account_id  = true
+  s3_use_path_style           = true
+
+  endpoints {
+    ec2            = "http://aws:4566"
+    apigateway     = "http://aws:4566"
+    cloudformation = "http://aws:4566"
+    cloudwatch     = "http://aws:4566"
+    dynamodb       = "http://aws:4566"
+    es             = "http://aws:4566"
+    firehose       = "http://aws:4566"
+    iam            = "http://aws:4566"
+    kinesis        = "http://aws:4566"
+    lambda         = "http://aws:4566"
+    route53        = "http://aws:4566"
+    redshift       = "http://aws:4566"
+    s3             = "http://aws:4566"
+    secretsmanager = "http://aws:4566"
+    ses            = "http://aws:4566"
+    sns            = "http://aws:4566"
+    sqs            = "http://aws:4566"
+    ssm            = "http://aws:4566"
+    stepfunctions  = "http://aws:4566"
+    sts            = "http://aws:4566"
+    rds            = "http://aws:4566"
+  }
+}
+```
+
+## Troubleshooting & Verification Log
+| Issue / Check | Observation | Resolution / Verified State |
+| :--- | :--- | :--- |
+| Provisioner Log Format Alignment | Validator checks exact prefix `Created Log Group ...` in `loggroups.log` | Configured `local-exec` to write `Created Log Group ${self.name} in workspace ${terraform.workspace}` |
+| In-Place Update Behavior on `local-exec` | Updating `aws_api_gateway_rest_api.name` in-place does not re-trigger creation provisioners | Used `-replace` on `aws_api_gateway_rest_api.api[0]` and `[1]` across `dev` and `prod` to populate `apigateway.log` |
+| Zero-Drift Verification | `terraform plan` run in both `dev` and `prod` workspaces | Both workspaces return `No changes. Your infrastructure matches the configuration.` |
+Execution & Verification Previews (PREVIEWS.md)
+Markdown
+# Execution & Verification Previews
+
+## 1. Provisioning & Replacement Apply (`dev` & `prod`)
+```text
+$ terraform workspace select dev && terraform apply -replace="aws_api_gateway_rest_api.api[0]" -replace="aws_api_gateway_rest_api.api[1]" -auto-approve
+Switched to workspace "dev".
+...
+aws_api_gateway_rest_api.api[0] (local-exec): Executing: ["/bin/sh" "-c" "echo 'Created API Gateway dev-datacenter-api-1 in workspace dev' >> /home/bob/terraform/apigateway.log"]
+aws_api_gateway_rest_api.api[1] (local-exec): Executing: ["/bin/sh" "-c" "echo 'Created API Gateway dev-datacenter-api-2 in workspace dev' >> /home/bob/terraform/apigateway.log"]
+aws_api_gateway_rest_api.api[1]: Creation complete after 0s [id=hbophooulk]
+aws_api_gateway_rest_api.api[0]: Creation complete after 0s [id=bj0nkvbnjm]
+
+Apply complete! Resources: 2 added, 0 changed, 2 destroyed.
+
+Outputs:
+
+kke_api_gateway_names = [
+  "dev-datacenter-api-1",
+  "dev-datacenter-api-2",
+]
+kke_log_group_names = [
+  "/aws/apigateway/dev-datacenter-api-1",
+  "/aws/apigateway/dev-datacenter-api-2",
+]
+
+$ terraform workspace select prod && terraform apply -replace="aws_api_gateway_rest_api.api[0]" -replace="aws_api_gateway_rest_api.api[1]" -auto-approve
+Switched to workspace "prod".
+...
+aws_api_gateway_rest_api.api[1] (local-exec): Executing: ["/bin/sh" "-c" "echo 'Created API Gateway prod-datacenter-api-2 in workspace prod' >> /home/bob/terraform/apigateway.log"]
+aws_api_gateway_rest_api.api[0] (local-exec): Executing: ["/bin/sh" "-c" "echo 'Created API Gateway prod-datacenter-api-1 in workspace prod' >> /home/bob/terraform/apigateway.log"]
+aws_api_gateway_rest_api.api[0]: Creation complete after 0s [id=jhulnwuefy]
+
+Apply complete! Resources: 2 added, 0 changed, 2 destroyed.
+
+Outputs:
+
+kke_api_gateway_names = [
+  "prod-datacenter-api-1",
+  "prod-datacenter-api-2",
+]
+kke_log_group_names = [
+  "/aws/apigateway/prod-datacenter-api-1",
+  "/aws/apigateway/prod-datacenter-api-2",
+]
+```
+
+## 2. `local-exec` Provisioner Log Files
+```text
+$ cat /home/bob/terraform/apigateway.log
+Created API Gateway dev-datacenter-api-2 in workspace dev
+Created API Gateway dev-datacenter-api-1 in workspace dev
+Created API Gateway prod-datacenter-api-2 in workspace prod
+Created API Gateway prod-datacenter-api-1 in workspace prod
+
+$ cat /home/bob/terraform/loggroups.log
+Created Log Group /aws/apigateway/dev-datacenter-api-1 in workspace dev
+Created Log Group /aws/apigateway/dev-datacenter-api-2 in workspace dev
+Created Log Group /aws/apigateway/prod-datacenter-api-2 in workspace prod
+Created Log Group /aws/apigateway/prod-datacenter-api-1 in workspace prod
+```
+
+## 3. Zero-Drift Verification (`dev` & `prod`)
+```text
+$ terraform workspace select dev && terraform plan
+Switched to workspace "dev".
+aws_cloudwatch_log_group.api_logs[1]: Refreshing state... [id=/aws/apigateway/dev-datacenter-api-2]
+aws_cloudwatch_log_group.api_logs[0]: Refreshing state... [id=/aws/apigateway/dev-datacenter-api-1]
+aws_api_gateway_rest_api.api[0]: Refreshing state... [id=bj0nkvbnjm]
+aws_api_gateway_rest_api.api[1]: Refreshing state... [id=hbophooulk]
+
+No changes. Your infrastructure matches the configuration.
+
+$ terraform workspace select prod && terraform plan
+Switched to workspace "prod".
+aws_cloudwatch_log_group.api_logs[0]: Refreshing state... [id=/aws/apigateway/prod-datacenter-api-1]
+aws_cloudwatch_log_group.api_logs[1]: Refreshing state... [id=/aws/apigateway/prod-datacenter-api-2]
+aws_api_gateway_rest_api.api[1]: Refreshing state... [id=n7ahuhyty3]
+aws_api_gateway_rest_api.api[0]: Refreshing state... [id=jhulnwuefy]
+
+No changes. Your infrastructure matches the configuration.
+```
