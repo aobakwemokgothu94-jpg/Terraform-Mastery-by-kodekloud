@@ -1,0 +1,267 @@
+# Terraform Level 3 Capstone: Enterprise AWS IAM Governance, KMS Encryption & Multi-Workspace Provisioning
+
+Production-grade Infrastructure-as-Code (IaC) capstone implementing automated IAM naming sanitization and tagging governance, AWS KMS symmetric encryption/decryption workflows, and multi-workspace API Gateway and CloudWatch Log Group provisioning using Terraform.
+
+---
+
+## Repository Structure
+
+```text
+terraform-level-3-capstone/
+├── README.md
+├── t1q2-iam-naming-governance/
+│   ├── main.tf
+│   ├── variables.tf
+│   ├── terraform.tfvars
+│   └── outputs.tf
+├── t2q1-kms-file-encryption/
+│   ├── main.tf
+│   ├── outputs.tf
+│   ├── SensitiveData.txt
+│   └── EncryptedData.bin
+└── t3q3-multi-workspace-apigw/
+    ├── main.tf
+    ├── variables.tf
+    ├── terraform.tfvars
+    ├── outputs.tf
+    ├── apigateway.log
+    └── loggroups.log
+Task 1 (t1q2): IAM Naming Sanitization & Tagging GovernanceArchitecture & ImplementationInput Validation: Enforces non-empty project identifiers and restricts team names to alphanumeric characters, hyphens, and underscores (^[A-Za-z0-9_-]+$).String Sanitization (locals): Normalizes inputs to lowercase, replaces consecutive non-alphanumeric sequences with single hyphens (replace(..., "/[^a-z0-9]+/", "-")), and strips leading or trailing hyphens via trim(..., "-").Tagging Governance: Merges a standardized common_tags map (Project, Team, ManagedBy, Env) with role-specific attributes (RoleType = "EC2").HCL Configuration (t1q2)variables.tfTerraformvariable "KKE_PROJECT" {
+  description = "Name of the project"
+  type        = string
+
+  validation {
+    condition     = length(trimspace(var.KKE_PROJECT)) > 0
+    error_message = "KKE_PROJECT must be non-empty."
+  }
+}
+
+variable "KKE_TEAM" {
+  description = "Name of the team"
+  type        = string
+
+  validation {
+    condition     = can(regex("^[A-Za-z0-9_-]+$", var.KKE_TEAM))
+    error_message = "KKE_TEAM must contain only letters, digits, dashes, or underscores."
+  }
+}
+
+variable "KKE_ENVIRONMENT" {
+  description = "Name of the environment"
+  type        = string
+}
+terraform.tfvarsTerraformKKE_PROJECT     = "datacenter-t1q2"
+KKE_TEAM        = "dev-team"
+KKE_ENVIRONMENT = "dev"
+main.tfTerraformlocals {
+  sanitized_project = trim(replace(lower(var.KKE_PROJECT), "/[^a-z0-9]+/", "-"), "-")
+  sanitized_team    = trim(replace(lower(var.KKE_TEAM), "/[^a-z0-9]+/", "-"), "-")
+  name_prefix       = "${local.sanitized_project}-${local.sanitized_team}"
+
+  common_tags = {
+    Project   = var.KKE_PROJECT
+    Team      = var.KKE_TEAM
+    ManagedBy = "Terraform"
+    Env       = var.KKE_ENVIRONMENT
+  }
+}
+
+resource "aws_iam_user" "kke_user" {
+  name = "${local.name_prefix}-user"
+  tags = local.common_tags
+}
+
+resource "aws_iam_role" "kke_role" {
+  name = "${local.name_prefix}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(
+    local.common_tags,
+    {
+      RoleType = "EC2"
+    }
+  )
+}
+outputs.tfTerraformoutput "kke_user_name" {
+  description = "The name of the created IAM User"
+  value       = aws_iam_user.kke_user.name
+}
+
+output "kke_role_name" {
+  description = "The name of the created IAM Role"
+  value       = aws_iam_role.kke_role.name
+}
+
+output "kke_tags_applied" {
+  description = "The tags applied to the IAM User"
+  value       = aws_iam_user.kke_user.tags
+}
+Terminal Verification Preview (t1q2)Plaintext$ terraform apply -auto-approve && terraform output && terraform plan
+aws_iam_user.kke_user: Creating...
+aws_iam_role.kke_role: Creating...
+aws_iam_user.kke_user: Creation complete after 0s [id=datacenter-t1q2-dev-team-user]
+aws_iam_role.kke_role: Creation complete after 0s [id=datacenter-t1q2-dev-team-role]
+
+Apply complete! Resources: 2 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+kke_role_name = "datacenter-t1q2-dev-team-role"
+kke_tags_applied = tomap({
+  "Env" = "dev"
+  "ManagedBy" = "Terraform"
+  "Project" = "datacenter-t1q2"
+  "Team" = "dev-team"
+})
+kke_user_name = "datacenter-t1q2-dev-team-user"
+
+No changes. Your infrastructure matches the configuration.
+Task 2 (t2q1): AWS KMS Symmetric Key & File Encryption/DecryptionArchitecture & ImplementationKey Management: Provisions a symmetric Customer Master Key (SYMMETRIC_DEFAULT) with automatic key rotation enabled and alias alias/datacenter-kms-key-t2q1.Encryption & Artifact Persistence: Encrypts SensitiveData.txt using aws_kms_ciphertext and writes the base64-encoded ciphertext blob to EncryptedData.bin via local_file.Decryption Verification: Reads EncryptedData.bin back through data.aws_kms_secrets and validates round-trip decryption against the original plaintext.HCL Configuration (t2q1)main.tfTerraformresource "aws_kms_key" "kke_kms_key" {
+  description             = "Symmetric KMS key datacenter-kms-key-t2q1"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Name = "datacenter-kms-key-t2q1"
+  }
+}
+
+resource "aws_kms_alias" "kke_kms_alias" {
+  name          = "alias/datacenter-kms-key-t2q1"
+  target_key_id = aws_kms_key.kke_kms_key.key_id
+}
+
+resource "aws_kms_ciphertext" "encrypted_sensitive_data" {
+  key_id    = aws_kms_key.kke_kms_key.key_id
+  plaintext = file("${path.module}/SensitiveData.txt")
+}
+
+resource "local_file" "encrypted_data_bin" {
+  content  = aws_kms_ciphertext.encrypted_sensitive_data.ciphertext_blob
+  filename = "${path.module}/EncryptedData.bin"
+}
+
+data "aws_kms_secrets" "decrypted_sensitive_data" {
+  depends_on = [local_file.encrypted_data_bin]
+
+  secret {
+    name    = "sensitive_data"
+    payload = file("${path.module}/EncryptedData.bin")
+  }
+}
+outputs.tfTerraformoutput "kke_kms_key_name" {
+  description = "Name of the KMS key created"
+  value       = replace(aws_kms_alias.kke_kms_alias.name, "alias/", "")
+}
+Terminal Verification Preview (t2q1)Plaintext$ terraform apply -auto-approve && terraform output
+aws_kms_key.kke_kms_key: Creation complete after 8s [id=8285e4b6-e40b-4dfa-8f2a-dbd4a777762f]
+aws_kms_alias.kke_kms_alias: Creation complete after 0s [id=alias/datacenter-kms-key-t2q1]
+aws_kms_ciphertext.encrypted_sensitive_data: Creation complete after 0s [id=2026-11-25 01:49:31.879236345 +0000 UTC]
+local_file.encrypted_data_bin: Creation complete after 0s [id=aefbe0ec508f2bb498f26e38b7d9f453e41a9d94]
+data.aws_kms_secrets.decrypted_sensitive_data: Read complete after 0s [id=us-east-1]
+
+Apply complete! Resources: 4 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+kke_kms_key_name = "datacenter-kms-key-t2q1"
+
+$ cat EncryptedData.bin; echo ""
+ODI4NWU0YjYtZTQwYi00ZGZhLThmMmEtZGJkNGE3Nzc3NjJmML3/fzu+SQ7a7LrfgQdbTusZxAYq1PEAGcWU/bTas+kWDy5lEZcyAnSbH+ujrHDsEt8AABoXQv75JY4Mh/56lg==
+
+$ base64 -d EncryptedData.bin > /tmp/test_cipher.bin
+$ aws kms decrypt --ciphertext-blob fileb:///tmp/test_cipher.bin --query Plaintext --output text | base64 -d; echo ""
+This is a sensitive file.
+
+$ echo 'nonsensitive(data.aws_kms_secrets.decrypted_sensitive_data.plaintext["sensitive_data"]) == file("SensitiveData.txt")' | terraform console
+true
+
+$ terraform plan
+No changes. Your infrastructure matches the configuration.
+Task 3 (t3q3): Multi-Workspace API Gateway & CloudWatch ProvisioningArchitecture & ImplementationWorkspace State Isolation: Uses terraform workspace (dev and prod) to maintain separate state files and dynamically prefix resource names with ${terraform.workspace}.Iterative Provisioning: Uses count = length(var.KKE_API_NAMES) and splat expressions ([*]) to provision paired REST APIs and CloudWatch Log Groups across environments.Provisioner Audit Trail: Executes local-exec provisioners upon resource creation to log workspace-scoped confirmation messages to apigateway.log and loggroups.log.HCL Configuration (t3q3)variables.tfTerraformvariable "KKE_API_NAMES" {
+  description = "List of API Gateway base names to create per workspace"
+  type        = list(string)
+}
+terraform.tfvarsTerraformKKE_API_NAMES = [
+  "datacenter-api-1",
+  "datacenter-api-2"
+]
+main.tfTerraformlocals {
+  api_names       = [for api in var.KKE_API_NAMES : "${terraform.workspace}-${api}"]
+  log_group_names = [for api in local.api_names : "/aws/apigateway/${api}"]
+}
+
+resource "aws_api_gateway_rest_api" "kke_api" {
+  count = length(var.KKE_API_NAMES)
+  name  = local.api_names[count.index]
+
+  provisioner "local-exec" {
+    command = "echo 'Created API Gateway ${self.name} in workspace ${terraform.workspace}' >> /home/bob/terraform/t3q3/apigateway.log"
+  }
+}
+
+resource "aws_cloudwatch_log_group" "kke_api_logs" {
+  count = length(var.KKE_API_NAMES)
+  name  = local.log_group_names[count.index]
+
+  provisioner "local-exec" {
+    command = "echo 'Created Log Group ${self.name} in workspace ${terraform.workspace}' >> /home/bob/terraform/t3q3/loggroups.log"
+  }
+}
+outputs.tfTerraformoutput "kke_api_gateway_names" {
+  description = "List of API Gateway names created in the active workspace"
+  value       = aws_api_gateway_rest_api.kke_api[*].name
+}
+
+output "kke_log_group_names" {
+  description = "List of CloudWatch Log Group names created in the active workspace"
+  value       = aws_cloudwatch_log_group.kke_api_logs[*].name
+}
+Terminal Verification Preview (t3q3)Plaintext$ terraform workspace select dev && terraform output && terraform plan
+Switched to workspace "dev".
+kke_api_gateway_names = [
+  "dev-datacenter-api-1",
+  "dev-datacenter-api-2",
+]
+kke_log_group_names = [
+  "/aws/apigateway/dev-datacenter-api-1",
+  "/aws/apigateway/dev-datacenter-api-2",
+]
+No changes. Your infrastructure matches the configuration.
+
+$ terraform workspace select prod && terraform output && terraform plan
+Switched to workspace "prod".
+kke_api_gateway_names = [
+  "prod-datacenter-api-1",
+  "prod-datacenter-api-2",
+]
+kke_log_group_names = [
+  "/aws/apigateway/prod-datacenter-api-1",
+  "/aws/apigateway/prod-datacenter-api-2",
+]
+No changes. Your infrastructure matches the configuration.
+
+$ cat apigateway.log
+Created API Gateway dev-datacenter-api-1 in workspace dev
+Created API Gateway dev-datacenter-api-2 in workspace dev
+Created API Gateway prod-datacenter-api-2 in workspace prod
+Created API Gateway prod-datacenter-api-1 in workspace prod
+
+$ cat loggroups.log
+Created Log Group /aws/apigateway/dev-datacenter-api-1 in workspace dev
+Created Log Group /aws/apigateway/dev-datacenter-api-2 in workspace dev
+Created Log Group /aws/apigateway/prod-datacenter-api-1 in workspace prod
+Created Log Group /aws/apigateway/prod-datacenter-api-2 in workspace prod
+Troubleshooting & Engineering LogIncidentRoot CauseResolutionDuplicate Provider Block ConflictLab working directories contain a pre-configured symlink (provider.tf -> /home/bob/terraform/provider.tf).Inspected directories with ls -la before authoring HCL files and omitted duplicate provider "aws" blocks from main.tf.Missing Local Ciphertext Artifact (EncryptedData.bin)Local file resources tracked in Terraform state were absent from disk after state refreshes across directory transitions.Executed terraform apply -replace="local_file.encrypted_data_bin" -auto-approve and verified artifact persistence with ls -la and base64 -d + aws kms decrypt.Multi-Workspace Resource Naming CollisionsProvisioning identical API Gateway and CloudWatch Log Group lists across environments causes namespace conflicts.Isolated state via terraform workspace (dev / prod) and dynamically prefixed resource names in locals using ${terraform.workspace}.
